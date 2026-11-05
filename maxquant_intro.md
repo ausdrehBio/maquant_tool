@@ -501,7 +501,7 @@ Main tables in `combined/txt/`:
 
 Relevant when adapting older tutorials or scripts:
 
-- `proteinGroups.txt` has **no `Reverse` column**. Identify decoys by the `REV__` prefix in `Protein IDs`.
+- `proteinGroups.txt` has **no `Reverse` column**. Decoys are marked `+` in the `Decoy` column. Do not filter on `REV__` anywhere in `Protein IDs`: a target group can contain a `REV__` member (in `tutorial_galaxy`, gelsolin: `P06396;CON__Q3SX14;REV__Q6TDU7`).
 - `Potential contaminant` is a column, `+` marks contaminants.
 - `evidence.txt` protein columns are `Proteins`, `Leading proteins`, `Leading razor proteins` (plural).
 - **LFQ intensity is 0 for proteins without at least one peptide quantified in two samples**, since MaxLFQ is built from pairwise peptide ratios. Older versions reported LFQ values for proteins seen in only one sample. For within-sample comparisons, use `Intensity`, or iBAQ. iBAQ is off in files generated with `--create` (`<ibaq>False</ibaq>`) and must be switched on before the run.
