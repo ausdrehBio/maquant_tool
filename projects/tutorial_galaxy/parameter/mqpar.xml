@@ -235,7 +235,7 @@
          <neucodeInSilicoLowRes>False</neucodeInSilicoLowRes>
          <fastLfq>True</fastLfq>
          <lfqRestrictFeatures>False</lfqRestrictFeatures>
-         <lfqMinRatioCount>1</lfqMinRatioCount>
+         <lfqMinRatioCount>2</lfqMinRatioCount>
          <lfqMinRatioCountDia>2</lfqMinRatioCountDia>
          <lfqPrioritizeMs1Dia>True</lfqPrioritizeMs1Dia>
          <lfqLamdaLimit>20</lfqLamdaLimit>

@@ -186,7 +186,7 @@ Default identifier parse rule, as it appears in mqpar.xml:
 
 It takes the accession between the first two `|` of a UniProt header (`>sp|P02768|ALBU_HUMAN ...` gives `P02768`). If FASTA headers are not in UniProt format, the rule must be adapted, otherwise protein IDs are wrong.
 
-The `tutorial_galaxy` project deviates from these defaults on purpose to reproduce the tutorial (1 missed cleavage, no variable modifications, min. 1 unique peptide, description rule `>(.*) OS`). Do not copy these settings to other projects.
+The `tutorial_galaxy` project deviates from these defaults on purpose to reproduce the tutorial (1 missed cleavage, no variable modifications, min. 1 unique peptide, description rule `>(.*) OS`, LFQ min. ratio count 2 instead of the `--create` default 1). Do not copy these settings to other projects.
 
 ### Editing
 

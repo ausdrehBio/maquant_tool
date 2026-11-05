@@ -1,12 +1,12 @@
 project:       tutorial_galaxy
-date (UTC):    2026-11-05T15:20:04Z
+date (UTC):    2026-11-05T16:23:38Z
 image:         maxquant:2.9.0
 image id:      sha256:5fd72042278faa0a6fcdd031a74c1ff9c1da34c16bc1aac3abea0d167cf20e75
-maxquant:      
+maxquant:      MaxQuantCmd 2.9.0.0
 host:          Darwin arm64
 
 sha256 of inputs:
-0fc4e6434950648962a3c279959560815e1bf0aa22f643dbd9e74d6e507bfdb0  parameter/mqpar.xml
+572e2c060795e7b81a31e6105e38439c5dd0869157a2266475f710f2535173e1  parameter/mqpar.xml
 c031dd48cc18169f66b11630bbe600b393d4cb771bdc72f20d745cd4d9d6d066  parameter/design.txt
 105364becf31287b2a5c1a04d9a3df393de2368fa98ca5a2f63d1ae85f2306a4  data/Sample1.raw
 0ef1710ebe1952d4952e5201593682a01407175c2b2cbf96f3feea6878452536  data/Sample2.raw
