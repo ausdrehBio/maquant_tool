@@ -1,0 +1,6 @@
+.DS_Store
+/MaxQuant_v.2.9.0/
+/projects/**/data/
+/projects/**/results/combined/
+/projects/**/parameter/mqpar_default.xml
+/projects/**/analysis_of_results/figures/

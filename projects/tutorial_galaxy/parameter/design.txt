@@ -1,0 +1,3 @@
+Name	Fraction	Experiment	PTM
+Sample1		Sample1	False
+Sample2		Sample2	False
