@@ -32,10 +32,10 @@ Roles of the folders:
 
 | Folder | Content | Written by |
 |---|---|---|
-| `data/` | raw files, FASTA | the user. Never modified, except MaxQuant's per-file working folders |
+| `data/` | raw files, FASTA | the user. Raw and FASTA files are never modified. MaxQuant adds working files (per-raw-file folders, `.index` files, a copy of mqpar.xml, `combined/` during the run) |
 | `parameter/` | `mqpar.xml`, `design.txt` | generated once, then edited only on purpose |
 | `results/` | `combined/`, `maxquant_run.log`, `run_info.txt` | only the runner script |
-| `analysis_of_results/` | QC, plots, statistics | analysis scripts, which read `results/` and never modify it |
+| `analysis_of_results/` | QC, plots, statistics | analysis scripts, which read `results/` and never modify it (one exception: PTXQC, section 7) |
 
 Reference project: `projects/tutorial_galaxy/` (Galaxy Training Network tutorial "Label-free data analysis using MaxQuant", two human serum samples).
 
@@ -45,7 +45,7 @@ Reference project: `projects/tutorial_galaxy/` (Galaxy Training Network tutorial
 
 ### Why Docker
 
-MaxQuant's GUI runs only on Windows. The command-line version runs on .NET 8, but on native macOS with Apple Silicon, Thermo's raw file reader (`ThermoFisher.CommonCore.RawFileReader.dll`) fails to load. Do not attempt native runs on the Mac. Inside a Linux x64 container, which is MaxQuant's officially supported platform, it works. Docker Desktop runs the container through Rosetta x64 emulation.
+MaxQuant's GUI runs only on Windows. The command-line version runs on .NET 8, but on native macOS with Apple Silicon, Thermo's raw file reader (`ThermoFisher.CommonCore.RawFileReader.dll`) fails to load. Do not attempt native runs on the Mac. Inside a Linux x64 container, which is MaxQuant's officially supported platform, it works. Docker Desktop emulates x64 with Rosetta when "Use Rosetta for x86_64/amd64 emulation on Apple Silicon" is enabled (Settings → General), otherwise with the slower QEMU.
 
 ### Check that the image exists
 
@@ -75,7 +75,7 @@ projects/
 
 ```bash
 docker build --platform linux/amd64 -t maxquant:2.9.0 .
-docker run --rm --platform linux/amd64 maxquant:2.9.0 --version   # expect: MaxQuantCmd 2.9.0.0
+docker run --rm --platform linux/amd64 maxquant:2.9.0 --version   # expect: MaxQuantCmd 2.9.0.0 (on stderr)
 ```
 
 The linter warning `FromPlatformFlagConstDisallowed` is harmless.
@@ -124,7 +124,7 @@ Full runs go through the runner script (section 5), not through ad hoc `docker r
 ### Properties
 
 - Plain XML. Each tag is one parameter, for example `<maxMissedCleavages>2</maxMissedCleavages>`. Lists use `<string>` children.
-- Contains absolute paths (FASTA, raw files, output folder). In this repository these must be `/work/...` paths.
+- Contains absolute paths (FASTA and raw files). In this repository these must be `/work/...` paths.
 - **Version-bound.** An mqpar.xml runs only with the MaxQuant version that created it. Check `<maxQuantVersion>`.
 - Parameters inside `<parameterGroups>` apply per group of raw files. Normally all files share one group.
 - The same modification names appear in several blocks (searched modifications, modifications used for quantification). Edit only the block you intend to change.
@@ -160,14 +160,7 @@ Only standard DDA on Thermo Orbitrap data has been tested with this image.
 
 ### Output location
 
-By default, MaxQuant writes `combined/` into the raw file folder (`data/`). To direct it to `results/`, check whether the file has a fixed combined folder parameter and set it:
-
-```bash
-grep -n "fixedCombinedFolder" $P/parameter/mqpar.xml
-sed -i '' 's|<fixedCombinedFolder>.*</fixedCombinedFolder>|<fixedCombinedFolder>/work/results</fixedCombinedFolder>|' $P/parameter/mqpar.xml
-```
-
-If the tag does not exist, MaxQuant writes to `data/combined/`. The runner script then moves it to `results/` after the run (section 5). After the first run of a project, verify where `combined/` was actually written. Per-raw-file working folders appear next to the raw files in `data/`.
+The mqpar.xml of MaxQuant 2.9.0 has no parameter for the location of `combined/`. MaxQuant writes `combined/` into the raw file folder, `data/`, together with per-raw-file working folders and `.index` files next to the raw files. After a successful run, the runner script moves `data/combined/` to `results/combined/` (section 5).
 
 ### Default search parameters
 
@@ -179,13 +172,19 @@ These defaults suit standard bottom-up experiments. Keep them unless the user sp
 | Max. missed cleavages | `<maxMissedCleavages>` | 2 |
 | Fixed modifications | `<fixedModifications>` | Carbamidomethyl (C) |
 | Variable modifications | `<variableModifications>` | Oxidation (M), Acetyl (Protein N-term) |
-| Min. peptide length | `<minPepLen>` | 7 |
+| Min. peptide length | `<minPeptideLength>` | 7 |
 | Min. unique peptides | `<minUniquePeptides>` | 0 |
 | PSM and protein FDR | | 0.01 |
-| Identifier parse rule | `<identifierParseRule>` | `>[^|]*\|(.*?)\|` (UniProt headers) |
+| Identifier parse rule | `<identifierParseRule>` | UniProt accession, regex below |
 | Description parse rule | `<descriptionParseRule>` | `>(.*)` |
 
-If FASTA headers are not in UniProt format (`>sp|P02768|ALBU_HUMAN ...`), the identifier parse rule must be adapted, otherwise protein IDs are wrong.
+Default identifier parse rule, as it appears in mqpar.xml:
+
+```xml
+<identifierParseRule>>[^|]*\|(.*?)\|</identifierParseRule>
+```
+
+It takes the accession between the first two `|` of a UniProt header (`>sp|P02768|ALBU_HUMAN ...` gives `P02768`). If FASTA headers are not in UniProt format, the rule must be adapted, otherwise protein IDs are wrong.
 
 The `tutorial_galaxy` project deviates from these defaults on purpose to reproduce the tutorial (1 missed cleavage, no variable modifications, min. 1 unique peptide, description rule `>(.*) OS`). Do not copy these settings to other projects.
 
@@ -197,6 +196,8 @@ Single values:
 docker run --rm --platform linux/amd64 -v "$(pwd)/$P":/work maxquant:2.9.0 \
   --changeParameter /work/parameter/mqpar.xml numThreads 8
 ```
+
+Use the full parameter name. `--changeParameter` matches partial names, and if a name matches several parameters it asks interactively, which a plain `docker run` (without `-it`) cannot answer.
 
 Direct edits with `sed` (macOS syntax `-i ''`). Always back up first and diff afterwards:
 
@@ -229,11 +230,11 @@ If the number or names of raw files changed, regenerating the file with a new `d
 ### Verify
 
 ```bash
-grep -n -A3 -E "<maxQuantVersion>|<fastaFilePath>|<filePaths>|<experiments>|<fixedCombinedFolder>" $P/parameter/mqpar.xml
+grep -n -A3 -E "<maxQuantVersion>|<fastaFilePath>|<filePaths>|<experiments>" $P/parameter/mqpar.xml
 docker run --rm --platform linux/amd64 -v "$(pwd)/$P":/work maxquant:2.9.0 /work/parameter/mqpar.xml --dryrun
 ```
 
-`--dryrun` parses the file and prints the job list without processing. A broken file or path fails here within seconds. The runner script repeats this check before every run.
+`--dryrun` parses the file and prints the job list without processing. A malformed file fails here within seconds. The runner script repeats this check before every run, and before it checks that every raw and FASTA path in mqpar.xml exists.
 
 ---
 
@@ -294,12 +295,12 @@ cat -t $P/parameter/design.txt
 
 ### What it does
 
-1. Checks prerequisites: Docker available, image present, `mqpar.xml` and `design.txt` present, no host paths in `mqpar.xml`.
+1. Checks prerequisites: Docker available, image present, `mqpar.xml` and `design.txt` present, every raw and FASTA path in `mqpar.xml` is a `/work/...` path to an existing file.
 2. Refuses to overwrite existing results unless called with `CLEAN=1`. With `CLEAN=1`, it deletes `results/combined/` and MaxQuant's working files in `data/` (per-raw-file folders, `.index` files, MaxQuant's mqpar copy). It never touches raw or FASTA files.
 3. Runs `--dryrun` as a fast parameter check.
 4. Writes `results/run_info.txt`: date, image ID, MaxQuant version, SHA-256 checksums of `mqpar.xml`, `design.txt`, raw files and FASTA files. The checksums prove which exact inputs produced the results.
 5. Runs MaxQuant in the container and writes the full log to `results/maxquant_run.log`.
-6. Moves `combined/` from `data/` to `results/` if MaxQuant wrote it there.
+6. Moves `combined/` from `data/` to `results/` (MaxQuant 2.9.0 always writes it into `data/`).
 
 It does not run downstream analysis. QC and statistics belong in `analysis_of_results/`.
 
@@ -320,12 +321,16 @@ CLEAN=1 projects/<project_name>/run_<project_name>.sh        # rerun, deletes pr
 Long runs: start in the background and follow the log:
 
 ```bash
-nohup projects/<project_name>/run_<project_name>.sh > /dev/null 2>&1 &
-tail -f projects/<project_name>/results/maxquant_run.log
+P=projects/<project_name>
+mkdir -p $P/results
+nohup $P/run_<project_name>.sh > $P/results/nohup.out 2>&1 &
+tail -f $P/results/maxquant_run.log
 docker ps --filter name=mq_<project_name>                    # still running?
 ```
 
-A finished run ends with `Finish writing tables` in the log. On failure, the log names a job. Details are in `results/combined/proc/<job>.error.txt` (or `data/combined/proc/`). The Mac must stay awake during a run, since sleep pauses the container.
+`nohup.out` holds the runner's own messages. If a check fails before MaxQuant starts (steps 1 to 3), the error appears only there, and `maxquant_run.log` is not written.
+
+A finished run ends with `Finish writing tables` in the log. On failure, the log names a job. Details are in `combined/proc/<job>.error.txt`: under `data/` if the script stopped before moving `combined/`, otherwise under `results/`. The Mac must stay awake during a run, since sleep pauses the container.
 
 ### Template
 
@@ -357,8 +362,15 @@ command -v docker > /dev/null || fail "docker not found"
 docker image inspect "$IMAGE" > /dev/null 2>&1 || fail "image $IMAGE missing, see maxquant_intro.md section 1"
 [[ -f parameter/mqpar.xml ]] || fail "parameter/mqpar.xml missing"
 [[ -f parameter/design.txt ]] || fail "parameter/design.txt missing"
-! grep -q "/Users/" "$MQPAR_HOST" || fail "mqpar.xml contains host paths, use /work/..."
 compgen -G "data/*.raw" > /dev/null || fail "no .raw files in data/"
+# raw and FASTA paths in mqpar.xml must be container paths to existing files
+mq_paths="$(sed -n -e 's|.*<fastaFilePath>\(.*\)</fastaFilePath>.*|\1|p' \
+  -e '/<filePaths>/,/<\/filePaths>/s|.*<string>\(.*\)</string>.*|\1|p' "$MQPAR_HOST")"
+[[ -n "$mq_paths" ]] || fail "no raw or FASTA paths found in mqpar.xml"
+while IFS= read -r p; do
+  [[ "$p" == /work/* ]] || fail "mqpar.xml path is not a /work/... path: $p"
+  [[ -e "$PROJECT_DIR/${p#/work/}" ]] || fail "mqpar.xml path does not exist in the project: $p"
+done <<< "$mq_paths"
 
 # 2. previous results
 if [[ -d results/combined || -d data/combined ]]; then
@@ -383,7 +395,7 @@ mq "$MQPAR" --dryrun > "$RESULTS/dryrun.txt" 2>&1 || fail "dry run failed, see r
   echo "date (UTC):    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "image:         $IMAGE"
   echo "image id:      $(docker image inspect --format '{{.Id}}' "$IMAGE")"
-  echo "maxquant:      $(mq --version | head -1)"
+  echo "maxquant:      $(mq --version 2>&1 | head -1)"
   echo "host:          $(uname -sm)"
   echo
   echo "sha256 of inputs:"
@@ -410,6 +422,7 @@ Notes on the template:
 
 - `set -euo pipefail` stops the script at the first error, including a failing MaxQuant run inside the `tee` pipe.
 - The script is bash. Run it as `./run_<project>.sh` or with `bash`, not by `source` in zsh.
+- MaxQuantCmd prints `--version` and `--help` to stderr, hence `2>&1` in the run info.
 - Checksumming large raw files takes a few seconds per GB.
 - MaxQuant's `.index` files must be deleted on reruns, since a broken index from a failed run can be reused silently.
 
@@ -431,7 +444,7 @@ MaxQuant generates its own decoys (`REV__`) and adds common contaminants (`CON__
 
 4. Look for `parameter/mqpar.xml` and `parameter/design.txt`. Reuse them after the checks in section 3, or prepare new ones.
 5. **Ask the user** about everything that cannot be derived from the data (list below). Present the proposed `design.txt` and the key parameters in one message and wait for confirmation.
-6. Generate or update the parameter files, apply edits, set the output folder to `/work/results`, verify with `--dryrun`.
+6. Generate or update the parameter files, apply edits, verify with `--dryrun`.
 7. Look for `run_<project_name>.sh`. If it is missing, create it from the template in section 5.
 8. Start the run through the runner script, in the background for long runs, and monitor the log.
 9. Report: where results are, protein group and peptide counts from `summary.txt` or `proteinGroups.txt`, anything unusual in the log.
@@ -452,7 +465,6 @@ MaxQuant generates its own decoys (`REV__`) and adds common contaminants (`CON__
 
 - Default search parameters from section 3.
 - `numThreads` based on the Docker CPU limit.
-- Output location in `results/`.
 - Experiment names derived from file names, if the user gave no names and the proposal is shown before the run.
 - Creating a missing runner script from the template.
 
@@ -468,6 +480,7 @@ results/
 │   ├── txt/            result tables
 │   └── proc/           job logs, *.error.txt on failure
 ├── maxquant_run.log    full MaxQuant log
+├── nohup.out           runner messages, for background runs
 ├── dryrun.txt          job list
 └── run_info.txt        image, version, input checksums
 ```
@@ -490,7 +503,7 @@ Relevant when adapting older tutorials or scripts:
 - `proteinGroups.txt` has **no `Reverse` column**. Identify decoys by the `REV__` prefix in `Protein IDs`.
 - `Potential contaminant` is a column, `+` marks contaminants.
 - `evidence.txt` protein columns are `Proteins`, `Leading proteins`, `Leading razor proteins` (plural).
-- **LFQ intensity is 0 for proteins without at least one peptide quantified in two samples**, since MaxLFQ is built from pairwise peptide ratios. Older versions reported LFQ values for proteins seen in only one sample. For within-sample comparisons, use `Intensity` or iBAQ.
+- **LFQ intensity is 0 for proteins without at least one peptide quantified in two samples**, since MaxLFQ is built from pairwise peptide ratios. Older versions reported LFQ values for proteins seen in only one sample. For within-sample comparisons, use `Intensity`, or iBAQ. iBAQ is off in files generated with `--create` (`<ibaq>False</ibaq>`) and must be switched on before the run.
 - Column positions change with version and sample count. Select columns by header name, case-insensitively (`Protein names` and `Protein Names` both occur).
 - In pandas 3, `astype(str)` keeps missing values as `NaN`. Convert with `map(str, ...)` before joining text.
 - MaxQuant's contaminant list contains human proteins (albumin, keratins). In human samples these can be genuine sample proteins. Filter only non-human contaminants in that case.
@@ -503,7 +516,7 @@ PTXQC runs natively in R on the host, not in the container. Place the call in `a
 Rscript -e "library(PTXQC); createReport('$(pwd)/projects/<project_name>/results/combined/txt')"
 ```
 
-Use an absolute path. With a relative path, report rendering fails. Install once with `install.packages("PTXQC")`. PTXQC writes its report into the txt folder. PTXQC thresholds are tuned for cell lysate runs, so low-complexity samples (plasma, serum, purified complexes) fail some metrics without a quality problem.
+Use an absolute path. With a relative path, report rendering fails. Install once with `install.packages("PTXQC")`. PTXQC writes its report files into the txt folder it reads. This is the one accepted exception to the rule that analysis does not write into `results/`: it only adds files and leaves MaxQuant's tables unchanged. A rerun with `CLEAN=1` deletes the report together with `combined/`. PTXQC thresholds are tuned for cell lysate runs, so low-complexity samples (plasma, serum, purified complexes) fail some metrics without a quality problem.
 
 ---
 
@@ -516,20 +529,22 @@ Use an absolute path. With a relative path, report rendering fails. Install once
 | `previous results exist` from the runner | Results from an earlier run. Confirm with the user, then rerun with `CLEAN=1`. |
 | `zsh: no matches found` | zsh aborts a command when a wildcard matches nothing. Name files explicitly, or use the bash runner script. |
 | A job fails | Read `combined/proc/<job>.error.txt`. |
-| Run is slow | x64 emulation costs speed. Check CPU and memory in Docker Desktop → Settings → Resources. |
+| Run is slow | x64 emulation costs speed. Check that Docker Desktop uses Rosetta (Settings → General), and check CPU and memory (Settings → Resources). |
 | Container name already in use | A previous run is still running or was not removed. Check `docker ps -a --filter name=mq_<project_name>`. |
 | Multi-line command breaks | A `\` must be the last character of the line. |
 
 ## 9. Repository notes
 
 - `MaxQuant_v.2.9.0/` contains MaxQuant's binaries and Thermo's RawFileReader DLLs. Both are distributed under their own licenses, which restrict redistribution. Keep this folder out of git.
-- Raw files and MaxQuant output are large. Keep them out of git. Keep `run_info.txt`, `dryrun.txt` and the log, since they document the run.
+- Raw files and MaxQuant output are large. Keep them out of git. Keep `run_info.txt`, `dryrun.txt`, `nohup.out` and the log, since they document the run.
 
-Suggested `.gitignore`:
+`.gitignore` of this repository:
 
 ```
-MaxQuant_v*/
-projects/*/data/
-projects/*/results/combined/
-projects/*/parameter/mqpar_default.xml
+.DS_Store
+/MaxQuant_v.2.9.0/
+/projects/**/data/
+/projects/**/results/combined/
+/projects/**/parameter/mqpar_default.xml
+/projects/**/analysis_of_results/figures/
 ```

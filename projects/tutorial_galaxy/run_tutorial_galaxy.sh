@@ -23,8 +23,15 @@ command -v docker > /dev/null || fail "docker not found"
 docker image inspect "$IMAGE" > /dev/null 2>&1 || fail "image $IMAGE missing, see maxquant_intro.md section 1"
 [[ -f parameter/mqpar.xml ]] || fail "parameter/mqpar.xml missing"
 [[ -f parameter/design.txt ]] || fail "parameter/design.txt missing"
-! grep -q "/Users/" "$MQPAR_HOST" || fail "mqpar.xml contains host paths, use /work/..."
 compgen -G "data/*.raw" > /dev/null || fail "no .raw files in data/"
+# raw and FASTA paths in mqpar.xml must be container paths to existing files
+mq_paths="$(sed -n -e 's|.*<fastaFilePath>\(.*\)</fastaFilePath>.*|\1|p' \
+  -e '/<filePaths>/,/<\/filePaths>/s|.*<string>\(.*\)</string>.*|\1|p' "$MQPAR_HOST")"
+[[ -n "$mq_paths" ]] || fail "no raw or FASTA paths found in mqpar.xml"
+while IFS= read -r p; do
+  [[ "$p" == /work/* ]] || fail "mqpar.xml path is not a /work/... path: $p"
+  [[ -e "$PROJECT_DIR/${p#/work/}" ]] || fail "mqpar.xml path does not exist in the project: $p"
+done <<< "$mq_paths"
 
 # 2. previous results
 if [[ -d results/combined || -d data/combined ]]; then
@@ -49,7 +56,7 @@ mq "$MQPAR" --dryrun > "$RESULTS/dryrun.txt" 2>&1 || fail "dry run failed, see r
   echo "date (UTC):    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "image:         $IMAGE"
   echo "image id:      $(docker image inspect --format '{{.Id}}' "$IMAGE")"
-  echo "maxquant:      $(mq --version | head -1)"
+  echo "maxquant:      $(mq --version 2>&1 | head -1)"
   echo "host:          $(uname -sm)"
   echo
   echo "sha256 of inputs:"
