@@ -67,7 +67,7 @@ mq "$MQPAR" --dryrun > "$RESULTS/dryrun.txt" 2>&1 || fail "dry run failed, see r
 } > "$RESULTS/run_info.txt" || true
 
 # 5. MaxQuant
-echo "MaxQuant running, log: $LOG"
+echo "MaxQuant running, log: results/maxquant_run.log"
 docker run --rm --name "$CONTAINER" --platform linux/amd64 \
   -v "$PROJECT_DIR":/work "$IMAGE" "$MQPAR" 2>&1 | tee "$LOG"
 
@@ -75,5 +75,5 @@ docker run --rm --name "$CONTAINER" --platform linux/amd64 \
 if [[ -d data/combined && ! -d results/combined ]]; then
   mv data/combined results/combined
 fi
-[[ -d results/combined/txt ]] || fail "no results/combined/txt, check $LOG"
-echo "done: $RESULTS/combined/txt"
+[[ -d results/combined/txt ]] || fail "no results/combined/txt, check results/maxquant_run.log"
+echo "done: results/combined/txt"

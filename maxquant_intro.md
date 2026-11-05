@@ -406,7 +406,7 @@ mq "$MQPAR" --dryrun > "$RESULTS/dryrun.txt" 2>&1 || fail "dry run failed, see r
 } > "$RESULTS/run_info.txt" || true
 
 # 5. MaxQuant
-echo "MaxQuant running, log: $LOG"
+echo "MaxQuant running, log: results/maxquant_run.log"
 docker run --rm --name "$CONTAINER" --platform linux/amd64 \
   -v "$PROJECT_DIR":/work "$IMAGE" "$MQPAR" 2>&1 | tee "$LOG"
 
@@ -414,8 +414,8 @@ docker run --rm --name "$CONTAINER" --platform linux/amd64 \
 if [[ -d data/combined && ! -d results/combined ]]; then
   mv data/combined results/combined
 fi
-[[ -d results/combined/txt ]] || fail "no results/combined/txt, check $LOG"
-echo "done: $RESULTS/combined/txt"
+[[ -d results/combined/txt ]] || fail "no results/combined/txt, check results/maxquant_run.log"
+echo "done: results/combined/txt"
 ```
 
 Notes on the template:
@@ -423,6 +423,7 @@ Notes on the template:
 - `set -euo pipefail` stops the script at the first error, including a failing MaxQuant run inside the `tee` pipe.
 - The script is bash. Run it as `./run_<project>.sh` or with `bash`, not by `source` in zsh.
 - MaxQuantCmd prints `--version` and `--help` to stderr, hence `2>&1` in the run info.
+- Messages name paths relative to the project folder, never complete host paths (section 9).
 - Checksumming large raw files takes a few seconds per GB.
 - MaxQuant's `.index` files must be deleted on reruns, since a broken index from a failed run can be reused silently.
 
@@ -480,7 +481,7 @@ results/
 │   ├── txt/            result tables
 │   └── proc/           job logs, *.error.txt on failure
 ├── maxquant_run.log    full MaxQuant log
-├── nohup.out           runner messages, for background runs
+├── nohup.out           runner messages of background runs, not in git
 ├── dryrun.txt          job list
 └── run_info.txt        image, version, input checksums
 ```
@@ -535,8 +536,14 @@ Use an absolute path. With a relative path, report rendering fails. Install once
 
 ## 9. Repository notes
 
+- **No complete host paths in any committed file**: no `/Users/<name>/...` or other home folder paths in scripts, logs, docs or parameter files. Scripts print paths relative to the project folder. The `/work/...` container paths in mqpar.xml are required by MaxQuant and reveal nothing about the host. Check before every commit, the command must print nothing:
+
+```bash
+git grep -n -I -E "/Users/[A-Za-z]|/home/[a-z]" ; git ls-files -o --exclude-standard | xargs grep -n -I -E "/Users/[A-Za-z]|/home/[a-z]"
+```
+
 - `MaxQuant_v.2.9.0/` contains MaxQuant's binaries and Thermo's RawFileReader DLLs. Both are distributed under their own licenses, which restrict redistribution. Keep this folder out of git.
-- Raw files and MaxQuant output are large. Keep them out of git. Keep `run_info.txt`, `dryrun.txt`, `nohup.out` and the log, since they document the run.
+- Raw files and MaxQuant output are large. Keep them out of git. Keep `run_info.txt`, `dryrun.txt` and the log, since they document the run. `nohup.out` is ignored: it duplicates the log plus a few runner messages.
 
 `.gitignore` of this repository:
 
@@ -545,6 +552,7 @@ Use an absolute path. With a relative path, report rendering fails. Install once
 /MaxQuant_v.2.9.0/
 /projects/**/data/
 /projects/**/results/combined/
+/projects/**/results/nohup.out
 /projects/**/parameter/mqpar_default.xml
 /projects/**/analysis_of_results/figures/
 ```
