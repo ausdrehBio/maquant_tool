@@ -404,10 +404,11 @@ mq() { podman run --rm --pull never --platform linux/amd64 --security-opt label=
          -v "$PROJECT_DIR":/work "$IMAGE" "$@"; }
 sha256() { if command -v sha256sum > /dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 # id of a job in results/dryrun.txt; names are compared without spaces and punctuation, since
-# MaxQuant's proc files write "MS/MS main search" as MSMS_main_search
+# MaxQuant's proc files write "MS/MS main search" as MSMS_main_search. Only lines with a numeric
+# id count: the header and podman warnings (servers without a login session) are skipped.
 job_id() {
   awk -F'\t' -v n="$1" 'function norm(s) { gsub(/[^A-Za-z0-9]/, "", s); return s }
-    NR > 1 && norm($2) == norm(n) { hits++; id = $1 } END { if (hits == 1) print id }' results/dryrun.txt
+    $1 ~ /^[0-9]+$/ && norm($2) == norm(n) { hits++; id = $1 } END { if (hits == 1) print id }' results/dryrun.txt
 }
 
 clean="${CLEAN:-0}"
@@ -541,7 +542,7 @@ if [[ -z "$resume" ]]; then
     echo "date (UTC):    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "image:         $IMAGE"
     echo "image id:      $(podman image inspect --format '{{.Id}}' "$IMAGE")"
-    echo "maxquant:      $(mq --version 2>&1 | head -1)"
+    echo "maxquant:      $(mq --version 2>&1 | grep -m1 '^MaxQuantCmd')"
     echo "host:          $(uname -sm)"
     echo "threads:       $threads"
     echo
@@ -736,7 +737,7 @@ Run `--dry-run` first, once on the login node and once inside a batch job: podma
 ### What it does
 
 1. Separates its own options (`--dry-run`, `--download-only`) from the runner's, which it passes through.
-2. Checks that the project's scripts and parameter files, `Dockerfile`, `.dockerignore` and podman exist, before anything expensive.
+2. Checks that the project's scripts and parameter files, `Dockerfile`, `.dockerignore` and podman exist, before anything expensive. Unsets `XDG_RUNTIME_DIR` if it points to a missing folder (see Batch jobs).
 3. Runs `setup.sh`.
 4. Activates the conda environment by its prefix: it finds the environment in `micromamba env list` or `conda env list`, puts its `bin/` first in `PATH` and sets `CONDA_PREFIX`. `conda activate` needs shell initialisation, which batch jobs lack, and a name alone is ambiguous when a server has several conda installations.
 5. Checks the tools (`podman`, `curl`, `python3`, `shasum`) and podman itself: the image must start (`MaxQuantCmd 2.9.0`), and a file written in the container into the project folder must belong to the user.
@@ -752,6 +753,13 @@ Every message has the form `[HH:MM:SS] step` or `[HH:MM:SS] ERROR: ...`, so a ha
 - Time limit: when a job is killed, submit the same batch script again. The runner continues at the interrupted job (section 5). `--clean` starts from job 1 instead.
 - If compute nodes have no internet, run `--download-only` on the login node first.
 - Podman stores images per user, in the folder that `podman info --format '{{.Store.GraphRoot}}'` prints. If it differs between the login node and the compute nodes, each node needs its own image, which `setup.sh` then builds there.
+- A batch job inherits `XDG_RUNTIME_DIR=/run/user/<uid>` from the login session, but on a compute node without a login session this folder does not exist, and rootless podman cannot use it. `run_server.sh` unsets the variable; podman then keeps its runtime files in `$TMPDIR` or `/tmp`. For podman commands typed by hand in a batch job, run `unset XDG_RUNTIME_DIR` first.
+- Without a systemd login session, every podman call prints warnings such as `The cgroupv2 manager is set to systemd but there is no systemd user session available` and `Falling back to --cgroup-manager=cgroupfs`, and the first call on a node also prints `Failed to add pause process to systemd sandbox cgroup`. They are harmless: podman switches to cgroupfs by itself. They also land at the top of `results/dryrun.txt` and `results/maxquant_run.log`, and the scripts ignore them there. To silence the cgroup warnings, add the following to `~/.config/containers/containers.conf` (a per-user setting; the scripts do not change it):
+
+  ```toml
+  [engine]
+  cgroup_manager = "cgroupfs"
+  ```
 
 ### Checking podman on a server
 
@@ -784,10 +792,11 @@ grep "^$USER:" /etc/subuid /etc/subgid
 | `container mq_<project_name> is running already` | Another run of this project is active, possibly from an earlier batch job. Check `podman ps --filter name=mq_<project_name>`; stop it with `podman stop mq_<project_name>` if it is not wanted. |
 | `not enough disk space` from the runner | Free space on the disk that holds the project, for example MaxQuant's working files in `data/` of finished projects (their results stay; a rerun with `--clean` recreates them). Ask the user before deleting anything. `--skip-disk-check` starts anyway. |
 | Deleting files frees less disk space than expected (Mac) | The Linux VM that runs the containers can keep files open that a container has used, even after they are deleted on the Mac (`lsof +L1 \| grep <project_name>` lists them). Restart the VM: `podman machine stop && podman machine start`. This can also hide the space freed by `--clean` from the runner's disk space check. |
-| `the MaxQuant image does not start` from `run_server.sh` | Run `podman run --rm --pull never --platform linux/amd64 localhost/maxquant:2.9.0 --version` by hand to see podman's error. A broken build: `podman rmi localhost/maxquant:2.9.0`, then `setup.sh` builds it again. |
+| `the MaxQuant image does not start` from `run_server.sh` | The lines after the message are podman's output. A broken build: `podman rmi localhost/maxquant:2.9.0`, then `setup.sh` builds it again. |
 | `files written in the container do not belong to you` | Podman does not run rootless, or the user has no entries in `/etc/subuid` and `/etc/subgid` (section 8). |
 | `podman cannot write to the mounted project folder` | Missing write permission on the project folder, or a security module other than SELinux blocks the mount. Run the failing `podman run` command by hand to see the error. |
-| Podman errors in batch jobs about `XDG_RUNTIME_DIR` or `/run/user` | Rootless podman needs a runtime folder, which batch jobs may lack. Ask the administrators for the recommended setting; `--dry-run` inside a batch job shows whether it works. |
+| Podman warnings or errors about `XDG_RUNTIME_DIR` or `/run/user/<uid>` | The variable points to a folder that does not exist, as in batch jobs without a login session. `run_server.sh` unsets it (section 8, batch jobs); before podman commands typed by hand, run `unset XDG_RUNTIME_DIR`. |
+| Podman warnings `no systemd user session available`, `Falling back to --cgroup-manager=cgroupfs` | Harmless; podman uses cgroupfs instead. To silence them, see section 8, batch jobs. |
 | `zsh: no matches found` | zsh aborts a command when a wildcard matches nothing. Name files explicitly, or use the bash runner script. |
 | A job fails | Read `combined/proc/<job>.error.txt`. |
 | Run is slow (Mac) | x64 emulation in the podman machine costs speed. Check the machine's CPUs and memory with `podman machine inspect`. On a Linux x86_64 server, the image runs without emulation. |

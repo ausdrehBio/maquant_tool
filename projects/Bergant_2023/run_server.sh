@@ -62,6 +62,13 @@ for f in Dockerfile .dockerignore; do
 done
 command -v podman > /dev/null || die "podman not found; it must be installed (rootless), see maxquant_intro.md section 8"
 log "paths ok"
+# rootless podman keeps its runtime files in $XDG_RUNTIME_DIR. A SLURM job inherits the login
+# session's /run/user/<uid>, which does not exist on a compute node without a login session.
+# Unset, podman uses a folder in $TMPDIR or /tmp instead.
+if [[ -n "${XDG_RUNTIME_DIR:-}" && ! -w "$XDG_RUNTIME_DIR" ]]; then
+  log "XDG_RUNTIME_DIR $XDG_RUNTIME_DIR is missing or not writable (no login session): unset for podman"
+  unset XDG_RUNTIME_DIR
+fi
 
 # 3. micromamba or conda, conda environment, MaxQuant image
 log "setup.sh"
@@ -81,8 +88,11 @@ log "conda environment $env_name active"
 for tool in podman curl python3 shasum; do
   command -v "$tool" > /dev/null || die "$tool not found after activating $env_name"
 done
-version="$(podman run --rm --pull never --platform linux/amd64 "$IMAGE" --version 2>&1 | head -1 || true)"
-[[ "$version" == "MaxQuantCmd 2.9.0"* ]] || die "the MaxQuant image does not start: ${version:-no output}"
+# MaxQuantCmd prints its version on stderr and exits with 1; podman warnings can come before it
+out="$(podman run --rm --pull never --platform linux/amd64 "$IMAGE" --version 2>&1 || true)"
+version="$(printf '%s\n' "$out" | grep -m1 '^MaxQuantCmd' || true)"
+[[ "$version" == "MaxQuantCmd 2.9.0"* ]] \
+  || die "the MaxQuant image does not start; podman's output:"$'\n'"$(printf '%s\n' "$out" | tail -20)"
 probe=".podman_write_test"
 rm -f "$PROJECT_DIR/$probe"
 podman run --rm --pull never --platform linux/amd64 --security-opt label=disable \

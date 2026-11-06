@@ -26,10 +26,11 @@ mq() { podman run --rm --pull never --platform linux/amd64 --security-opt label=
          -v "$PROJECT_DIR":/work "$IMAGE" "$@"; }
 sha256() { if command -v sha256sum > /dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 # id of a job in results/dryrun.txt; names are compared without spaces and punctuation, since
-# MaxQuant's proc files write "MS/MS main search" as MSMS_main_search
+# MaxQuant's proc files write "MS/MS main search" as MSMS_main_search. Only lines with a numeric
+# id count: the header and podman warnings (servers without a login session) are skipped.
 job_id() {
   awk -F'\t' -v n="$1" 'function norm(s) { gsub(/[^A-Za-z0-9]/, "", s); return s }
-    NR > 1 && norm($2) == norm(n) { hits++; id = $1 } END { if (hits == 1) print id }' results/dryrun.txt
+    $1 ~ /^[0-9]+$/ && norm($2) == norm(n) { hits++; id = $1 } END { if (hits == 1) print id }' results/dryrun.txt
 }
 
 clean="${CLEAN:-0}"
@@ -163,7 +164,7 @@ if [[ -z "$resume" ]]; then
     echo "date (UTC):    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "image:         $IMAGE"
     echo "image id:      $(podman image inspect --format '{{.Id}}' "$IMAGE")"
-    echo "maxquant:      $(mq --version 2>&1 | head -1)"
+    echo "maxquant:      $(mq --version 2>&1 | grep -m1 '^MaxQuantCmd')"
     echo "host:          $(uname -sm)"
     echo "threads:       $threads"
     echo
