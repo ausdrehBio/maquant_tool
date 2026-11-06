@@ -1,0 +1,11 @@
+# Host tools for run_server.sh: the data download (get_data_Bergant_2023.sh) and the checksums
+# of run_Bergant_2023.sh. MaxQuant runs in the podman image and needs nothing from here.
+# setup.sh creates the environment under this name and recreates it when this file changes.
+name: maxquant_Bergant_2023
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.12
+  - curl
+  - perl  # provides shasum

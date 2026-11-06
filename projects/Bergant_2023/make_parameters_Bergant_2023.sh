@@ -33,7 +33,7 @@
 #         output before the changes, not in git)
 set -euo pipefail
 
-IMAGE="maxquant:2.9.0"
+IMAGE="localhost/maxquant:2.9.0"
 NUM_THREADS=8
 FASTA_FILES=(ensembl_human_GRCh37-75.fa Flu_H1N1_PR8.fasta Flu_H7N7_SC35M.fasta)
 SAMPLE_DESCRIPTION="parameter/deposited/Sample_descriptions_IAV_FPMS.txt"
@@ -44,9 +44,9 @@ cd "$PROJECT_DIR"
 fail() { echo "ERROR: $*" >&2; exit 1; }
 
 # 1. prerequisites
-command -v docker > /dev/null || fail "docker not found"
+command -v podman > /dev/null || fail "podman not found"
 command -v python3 > /dev/null || fail "python3 not found"
-docker image inspect "$IMAGE" > /dev/null 2>&1 || fail "image $IMAGE missing, see maxquant_intro.md section 1"
+podman image exists "$IMAGE" || fail "image $IMAGE missing, see maxquant_intro.md section 1"
 [[ -f "$SAMPLE_DESCRIPTION" ]] || fail "$SAMPLE_DESCRIPTION missing, run get_data_Bergant_2023.sh"
 for db in "${FASTA_FILES[@]}"; do
   [[ -f "data/$db" ]] || fail "data/$db missing, run get_data_Bergant_2023.sh"
@@ -98,7 +98,8 @@ for db in "${FASTA_FILES[@]}"; do
   cp "data/$db" "$tmp/data/"
   fasta_args+=("/work/data/$db")
 done
-mq_tmp() { docker run --rm --platform linux/amd64 -v "$tmp":/work "$IMAGE" "$@"; }
+mq_tmp() { podman run --rm --pull never --platform linux/amd64 --security-opt label=disable \
+             -v "$tmp":/work "$IMAGE" "$@"; }
 mq_tmp --create --newMqpar /work/parameter/mqpar.xml \
   --LCMSType ST --instrumentType TO \
   --pathFasta "${fasta_args[@]}" \
