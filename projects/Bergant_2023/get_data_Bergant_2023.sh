@@ -46,7 +46,9 @@ verify() {
 }
 
 # download_one LOCAL_PATH BYTES CHECKSUM URL: resumable download into LOCAL_PATH.part,
-# verified, then renamed. A verified file is never downloaded again.
+# verified, then renamed. A verified file is never downloaded again. curl's --retry skips
+# dropped connections (curl: (56) ...), so each of up to 5 attempts is a new curl call that
+# continues the .part file.
 download_one() {
   local dest="$1" bytes="$2" checksum="$3" url="$4" part="$1.part"
   mkdir -p "$(dirname "$dest")"
@@ -61,10 +63,14 @@ download_one() {
     return 0
   fi
   if [[ -f "$part" && "$(size_of "$part")" -gt "$bytes" ]]; then rm -f "$part"; fi
-  if [[ ! -f "$part" || "$(size_of "$part")" -lt "$bytes" ]]; then
-    curl -fsSL --retry 5 --retry-delay 10 -C - -o "$part" "$url" \
-      || { echo "ERROR: download failed: $url" >&2; return 1; }
-  fi
+  local tries=0
+  while [[ ! -f "$part" || "$(size_of "$part")" -lt "$bytes" ]]; do
+    tries=$(( tries + 1 ))
+    curl -fsSL --retry 5 --retry-delay 10 -C - -o "$part" "$url" && break
+    (( tries < 5 )) || { echo "ERROR: download failed after $tries attempts: $url" >&2; return 1; }
+    echo "failed, continuing in 60 s (attempt $(( tries + 1 )) of 5): $dest" >&2
+    sleep 60
+  done
   local status=0
   verify "$part" "$bytes" "$checksum" || status=$?
   if (( status == 1 )); then
