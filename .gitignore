@@ -5,3 +5,5 @@
 /projects/**/results/nohup.out
 /projects/**/parameter/mqpar_default.xml
 /projects/**/analysis_of_results/figures/
+/projects/**/analysis_of_results/msstats/FeatureLevelData.tsv
+/projects/*/*.pdf

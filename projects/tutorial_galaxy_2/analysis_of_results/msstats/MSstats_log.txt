@@ -1,0 +1,125 @@
+INFO  [2026-11-05 21:50:57] ** Raw data from MaxQuant imported successfully.
+INFO  [2026-11-05 21:50:57] ** Rows with values of Potentialcontaminant equal to + are removed 
+INFO  [2026-11-05 21:50:57] ** Rows with values of Reverse equal to + are removed 
+INFO  [2026-11-05 21:50:57] ** Rows with values of Potentialcontaminant equal to + are removed 
+INFO  [2026-11-05 21:50:57] ** Rows with values of Reverse equal to + are removed 
+INFO  [2026-11-05 21:50:57] ** Rows with values of Onlyidentifiedbysite equal to + are removed 
+INFO  [2026-11-05 21:50:57] ** + Contaminant, + Reverse, + Potential.contaminant, + Only.identified.by.site proteins are removed.
+INFO  [2026-11-05 21:50:57] ** Raw data from MaxQuant cleaned successfully.
+INFO  [2026-11-05 21:50:57] ** Using provided annotation.
+INFO  [2026-11-05 21:50:57] ** Run labels were standardized to remove symbols such as '.' or '%'.
+INFO  [2026-11-05 21:50:57] ** The following options are used:
+  - Features will be defined by the columns: PeptideSequence, PrecursorCharge
+  - Shared peptides will be removed.
+  - Proteins with a single feature will be removed.
+  - Features with less than 3 measurements across runs will be removed.
+INFO  [2026-11-05 21:50:57] ** Features with all missing measurements across runs are removed.
+INFO  [2026-11-05 21:50:57] ** Shared peptides are removed.
+INFO  [2026-11-05 21:50:58] ** Multiple measurements in a feature and a run are summarized by summaryforMultipleRows: max
+INFO  [2026-11-05 21:50:58] ** Features with one or two measurements across runs are removed.
+INFO  [2026-11-05 21:50:58] Proteins with a single feature are removed.
+INFO  [2026-11-05 21:50:58] ** Run annotation merged with quantification data.
+INFO  [2026-11-05 21:50:58] ** Features with one or two measurements across runs are removed.
+INFO  [2026-11-05 21:50:58] ** Fractionation handled.
+INFO  [2026-11-05 21:50:58] ** Updated quantification data to make balanced design. Missing values are marked by NA
+INFO  [2026-11-05 21:50:58] 
+
+INFO  [2026-11-05 21:50:58] ** Finished preprocessing. The dataset is ready to be processed by the dataProcess function.
+INFO  [2026-11-05 21:50:58] 
+
+INFO  [2026-11-05 21:50:58] MSstats - dataProcess function
+INFO  [2026-11-05 21:50:58] Summary method: TMP
+INFO  [2026-11-05 21:50:58] censoredInt: NA
+INFO  [2026-11-05 21:50:58] Logarithm transformation with base 2 is done
+INFO  [2026-11-05 21:50:58] Factorize in columns(GROUP, SUBJECT, GROUP_ORIGINAL, SUBJECT_ORIGINAL, FEATURE, RUN)
+Normalization based on median: OK [2026-11-05 21:50:58] 
+INFO  [2026-11-05 21:50:58] ** Log2 intensities under cutoff = 15.235  were considered as censored missing values.
+INFO  [2026-11-05 21:50:58] ** Log2 intensities = NA were considered as censored missing values.
+INFO  [2026-11-05 21:50:58] ** Use all features that the dataset originally has.
+INFO  [2026-11-05 21:50:58] 
+ # proteins: 1698
+ # peptides per protein: 2-269
+ # features per peptide: 1-1
+INFO  [2026-11-05 21:50:58] 
+                    RDEB metast
+             # runs    6     13
+    # bioreplicates    6     13
+ # tech. replicates    1      1
+INFO  [2026-11-05 21:50:58] Some features are completely missing in at least one condition:  
+ AAAITSDILEALGRDGHFTLFAPTNEAFEK_3_NA_NA,
+ AAALSLSTLASPK_2_NA_NA,
+ AACLLPK_2_NA_NA,
+ AADFIDQALAQK_2_NA_NA,
+ AAEDYGVIKTDMFQTVDLFEGK_3_NA_NA ...
+INFO  [2026-11-05 21:50:58] == Start the summarization per subplot...
+INFO  [2026-11-05 21:51:13] == Summarization is done.
+INFO  [2026-11-05 21:51:14] MSstats - quantification function
+INFO  [2026-11-05 21:51:14] type of quantification = Sample
+INFO  [2026-11-05 21:51:14] format of output = matrix
+INFO  [2026-11-05 21:51:14] Finish sample quantificiation - okay.
+INFO  [2026-11-05 21:51:14] MSstats - quantification function
+INFO  [2026-11-05 21:51:14] type of quantification = Group
+INFO  [2026-11-05 21:51:14] format of output = matrix
+INFO  [2026-11-05 21:51:14] Finish group quantificiation - okay.
+INFO  [2026-11-05 21:51:15] MSstats - groupComparison function
+INFO  [2026-11-05 21:51:15] labeled = FALSE
+INFO  [2026-11-05 21:51:15] scopeOfBioReplication = expanded
+INFO  [2026-11-05 21:51:15] Case control design of experiment - okay
+INFO  [2026-11-05 21:51:15] == Start to test and get inference in whole plot
+INFO  [2026-11-05 21:51:15] *** error: results of protein sp|O00425|IF2B3_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:15] *** error: results of protein sp|O14879|IFIT3_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:15] *** error: results of protein sp|O60610|DIAP1_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:15] *** error: results of protein sp|O75112|LDB3_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:16] *** error: results of protein sp|O75339|CILP1_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:16] *** error: results of protein sp|O96000|NDUBA_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:16] *** error: results of protein sp|P02144|MYG_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:16] *** error: results of protein sp|P02585|TNNC2_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:16] *** error: results of protein sp|P02686|MBP_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:16] *** error: results of protein sp|P08237|PFKAM_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:16] *** error: results of protein sp|P08590|MYL3_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:16] *** error: results of protein sp|P0DJI8|SAA1_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:16] *** error: results of protein sp|P10916|MLRV_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:16] *** error: results of protein sp|P11217|PYGM_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:17] *** error: results of protein sp|P13805|TNNT1_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:17] *** error: results of protein sp|P14555|PA2GA_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:17] *** error: results of protein sp|P14649|MYL6B_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:17] *** error: results of protein sp|P17540|KCRS_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:17] *** error: results of protein sp|P25189|MYP0_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:17] *** error: results of protein sp|P30838|AL3A1_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:17] *** error: results of protein sp|P31415|CASQ1_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:17] *** error: results of protein sp|P33316|DUT_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:17] *** error: results of protein sp|P33993|MCM7_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:17] *** error: results of protein sp|P35625|TIMP3_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:17] *** error: results of protein sp|P39900|MMP12_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P41222|PTGDS_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P48788|TNNI2_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P49736|MCM2_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P49913|CAMP_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P50281|MMP14_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P50895|BCAM_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P50897|PPT1_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P52179|MYOM1_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P52790|HXK3_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P52943|CRIP2_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P54296|MYOM2_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:18] *** error: results of protein sp|P78539|SRPX_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q00796|DHSO_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q00872|MYPC1_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q02978|M2OM_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q08397|LOXL1_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q15646|OASL_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q16082|HSPB2_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q3SY84|K2C71_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q53GG5|PDLI3_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q5T4S7|UBR4_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q6ZMU5|TRI72_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q7Z2W4|ZCCHV_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q7Z3Y8|K1C27_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:19] *** error: results of protein sp|Q86TD4|SRCA_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:20] *** error: results of protein sp|Q9HCC0|MCCB_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:20] *** error: results of protein sp|Q9NP98|MYOZ1_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:20] *** error: results of protein sp|Q9NPC6|MYOZ2_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:20] *** error: results of protein sp|Q9UBF9|MYOTI_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:20] *** error: results of protein sp|Q9Y623|MYH4_HUMAN for comparison metast-RDEB are NA because there are measurements only in a single group
+INFO  [2026-11-05 21:51:20] == Comparisons for all proteins are done.
+INFO  [2026-11-05 21:51:20] The output for groupComparison is ready.

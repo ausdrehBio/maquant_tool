@@ -1,0 +1,4 @@
+PXD040456
+Whole-cell proteomics (FP-MS)
+Cell line: A549 
+A/Puerto Rico/8/1934 

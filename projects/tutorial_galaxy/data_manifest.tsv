@@ -1,0 +1,4 @@
+kind	local_path	bytes	checksum	source	note
+fasta	data/Protein_database.fasta	13596047	md5:ef65ff8e4bbfc17d3d2b75d514175bed	https://zenodo.org/record/4274987/files/Protein_database.fasta	Zenodo 4274987, Protein_database.fasta
+raw	data/Sample1.raw	497473243	md5:34402bf7a61eaae9f5b31a5e09e21fd9	https://zenodo.org/record/4274987/files/Sample1.raw	Zenodo 4274987, Sample1.raw
+raw	data/Sample2.raw	613637915	md5:110b903dc800204a9d423a41b057ba25	https://zenodo.org/record/4274987/files/Sample2.raw	Zenodo 4274987, Sample2.raw

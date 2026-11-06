@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Reproducible MaxQuant run for one project.
-# Usage:  ./run_<project>.sh          first run
-#         CLEAN=1 ./run_<project>.sh  rerun, deletes previous results
+# Usage:  ./run_<project>.sh                    first run
+#         CLEAN=1 ./run_<project>.sh            rerun, deletes previous results
+#         SKIP_DISK_CHECK=1 ./run_<project>.sh  start despite too little free disk space
 # Details: maxquant_intro.md, section 5
 set -euo pipefail
 
@@ -34,6 +35,8 @@ while IFS= read -r p; do
 done <<< "$mq_paths"
 
 # 2. previous results
+# a manual --dryrun leaves an empty data/combined/proc; rmdir removes only empty folders
+rmdir data/combined/proc data/combined 2>/dev/null || true
 if [[ -d results/combined || -d data/combined ]]; then
   [[ "${CLEAN:-0}" == "1" ]] || fail "previous results exist, rerun with CLEAN=1 to delete them"
   echo "CLEAN=1: removing previous results and MaxQuant working files"
@@ -46,11 +49,25 @@ if [[ -d results/combined || -d data/combined ]]; then
 fi
 mkdir -p "$RESULTS"
 
-# 3. parameter check
+# 3. disk space: MaxQuant's working files and combined/ need up to 2.2 times the raw data
+raw_kb="$(du -ck data/*.raw | tail -1 | cut -f1)"
+need_kb=$(( raw_kb * 22 / 10 ))
+free_kb="$(df -Pk data | awk 'NR == 2 { print $4 }')"
+disk="$(awk -v n="$need_kb" -v r="$raw_kb" -v f="$free_kb" 'BEGIN {
+  printf "about %.1f GB needed (2.2 x %.1f GB raw data), %.1f GB free", n / 1e6, r / 1e6, f / 1e6 }')"
+if (( free_kb < need_kb )); then
+  [[ "${SKIP_DISK_CHECK:-0}" == "1" ]] \
+    || fail "not enough disk space: $disk; free space, or rerun with SKIP_DISK_CHECK=1"
+  echo "WARNING: not enough disk space: $disk; SKIP_DISK_CHECK=1, starting anyway"
+else
+  echo "disk space: $disk"
+fi
+
+# 4. parameter check
 echo "dry run ..."
 mq "$MQPAR" --dryrun > "$RESULTS/dryrun.txt" 2>&1 || fail "dry run failed, see results/dryrun.txt"
 
-# 4. run info
+# 5. run info
 {
   echo "project:       $PROJECT_NAME"
   echo "date (UTC):    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -66,12 +83,12 @@ mq "$MQPAR" --dryrun > "$RESULTS/dryrun.txt" 2>&1 || fail "dry run failed, see r
   done
 } > "$RESULTS/run_info.txt" || true
 
-# 5. MaxQuant
+# 6. MaxQuant
 echo "MaxQuant running, log: results/maxquant_run.log"
 docker run --rm --name "$CONTAINER" --platform linux/amd64 \
   -v "$PROJECT_DIR":/work "$IMAGE" "$MQPAR" 2>&1 | tee "$LOG"
 
-# 6. collect output
+# 7. collect output
 if [[ -d data/combined && ! -d results/combined ]]; then
   mv data/combined results/combined
 fi

@@ -1,0 +1,51 @@
+id	job name
+1	Configuring 
+2	Assemble run info 
+3	Finish run info 
+4	Testing fasta files 
+5	Testing raw files 
+6	Feature detection 
+7	Deisotoping 
+8	MS/MS preparation 
+9	Calculating peak properties 
+10	Combining apl files for first search 
+11	Preparing searches 
+12	MS/MS first search 
+13	Read search results for recalibration 
+14	Mass recalibration 
+15	Calculating masses 
+16	MS/MS preparation for main search 
+17	Combining apl files for main search 
+18	MS/MS main search 
+19	Preparing combined folder  
+20	Correcting errors 
+21	Reading search engine results 
+22	Preparing reverse hits 
+23	Finish search engine results 
+24	Filter identifications (MS/MS) 
+25	Calculating PEP 
+26	Copying identifications 
+27	Applying FDR 
+28	Assembling second peptide MS/MS 
+29	Combining second peptide files 
+30	Second peptide search 
+31	Reading search engine results (SP) 
+32	Finish search engine results (SP) 
+33	Filtering identifications (SP) 
+34	Applying FDR (SP) 
+35	Re-quantification 
+36	Reporter quantification 
+37	Retention time alignment 
+38	Matching between runs 1 
+39	Matching between runs 2 
+40	Matching between runs 3 
+41	Matching between runs 4 
+42	Prepare protein assembly 
+43	Assembling proteins 
+44	Assembling unidentified peptides 
+45	Finish protein assembly 
+46	Updating identifications 
+47	Estimating complexity 
+48	Prepare writing tables  
+49	Writing tables 
+50	Finish writing tables  

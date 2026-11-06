@@ -1,0 +1,7 @@
+R	4.5.2
+MSstats	4.18.1
+MSstatsConvert	1.20.0
+protein_groups_total	2496
+protein_groups_without_human_protein	28
+evidence_rows_total	228606
+evidence_rows_without_human_protein	1376

@@ -1,0 +1,30 @@
+project:       tutorial_galaxy_2
+date (UTC):    2026-11-05T17:23:54Z
+image:         maxquant:2.9.0
+image id:      sha256:5fd72042278faa0a6fcdd031a74c1ff9c1da34c16bc1aac3abea0d167cf20e75
+maxquant:      MaxQuantCmd 2.9.0.0
+host:          Darwin arm64
+
+sha256 of inputs:
+42c2cf812f604c031be041a471c0fac33745bafdb5aab7a6ff2b846bec410129  parameter/mqpar.xml
+38de40a8bd456be6630b010297f923bffc6fd2405fab9bd6ba81fa3854542153  parameter/design.txt
+5e372b97e0deb8fa77d64f8e7e17eaca5eead5b5a8d2ce3c2bd0372fae6d6ff9  data/RDEB_cSCC1.raw
+89520e3a79bd70d66a6e73d04092b31983818c0915370c16d6fe563b14e02cfd  data/RDEB_cSCC2.raw
+a6eadea592d164c5d4ed7c80dfbd543e2f0d1deb8adde82a879fb11968b8201a  data/RDEB_cSCC3.raw
+04ac22976c365a74552259f7c36a22c2ebad6ee565265ff4727e951bfc47e69c  data/RDEB_cSCC4.raw
+2f2d31002c81d566277256ec2fe9b4e3ad729fbfaea44fe8983092e1c5386340  data/RDEB_cSCC5.raw
+22e2afb2d17963434c4e0fc24b1ce75576a472a29554be15941eda50b1c44407  data/RDEB_cSCC6.raw
+432105562100e4886675920ba3c00e4eb3d521471bbbe3a3e5ea35dd59ba84bd  data/metast_cSCC1.raw
+b50785ac3e4a926af673baaf4fd2e7f2d5b2984b8d413f02b4f679b9fb8743bf  data/metast_cSCC10.raw
+16da04b25aa26f8b9a29c74a06a6daa586b207482fcadcb382b1fdd18fffbf91  data/metast_cSCC11.raw
+00123bfb4059cc37b37c4d8abc036ee5b815a42e106187e7101abecb23b4b1c5  data/metast_cSCC12.raw
+16f8b57b12e878e529746a2a44aa4c0766ba802071ac88deefbd0ecee79cf9eb  data/metast_cSCC13.raw
+72e747187781d5d7dbd7f63db7ccce60a9f0cb4b0e7ca574ce9a18333c4a5c4e  data/metast_cSCC2.raw
+09d0d078d3ae620cd4542689b8609c629a8161a8f10be066b91d250bae338d22  data/metast_cSCC3.raw
+ae24bfe32631428b59d968e961cc18ad92a36d232404189e7c2ae5b5107b4c6e  data/metast_cSCC4.raw
+1e08b902a9c801616b001a25d3fb1ec73ecef489a60d20aafbca63886956cade  data/metast_cSCC5.raw
+b960c9570e7df4c544cc8167f154b59a511cf4cc13c1e9a50e568a84e27b92cf  data/metast_cSCC6.raw
+227db3762abc2922d00fc05a02af3caede346cf1a8d2a826fc6feadbd4299f3a  data/metast_cSCC7.raw
+8cf59db928d549e2cc5e8be5d8bced4c6e9425cc0aa2ca8f5b2b497f6a0301b2  data/metast_cSCC8.raw
+e187d4f529d5bc170ff144633fa595a426b22ef3bcbfc3a6a0bfa2b0519a6e7a  data/metast_cSCC9.raw
+692ec52aa290fdb92abc0a100359ec63d6fef8eac7ed20e72e54a5f542fb8711  data/input_protein_database.fasta

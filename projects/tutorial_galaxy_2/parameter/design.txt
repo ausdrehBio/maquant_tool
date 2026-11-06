@@ -1,0 +1,20 @@
+Name	Fraction	Experiment	PTM
+metast_cSCC1		metast_cSCC1	False
+metast_cSCC2		metast_cSCC2	False
+metast_cSCC3		metast_cSCC3	False
+metast_cSCC4		metast_cSCC4	False
+metast_cSCC5		metast_cSCC5	False
+metast_cSCC6		metast_cSCC6	False
+metast_cSCC7		metast_cSCC7	False
+metast_cSCC8		metast_cSCC8	False
+metast_cSCC9		metast_cSCC9	False
+metast_cSCC10		metast_cSCC10	False
+metast_cSCC11		metast_cSCC11	False
+metast_cSCC12		metast_cSCC12	False
+metast_cSCC13		metast_cSCC13	False
+RDEB_cSCC1		RDEB_cSCC1	False
+RDEB_cSCC2		RDEB_cSCC2	False
+RDEB_cSCC3		RDEB_cSCC3	False
+RDEB_cSCC4		RDEB_cSCC4	False
+RDEB_cSCC5		RDEB_cSCC5	False
+RDEB_cSCC6		RDEB_cSCC6	False

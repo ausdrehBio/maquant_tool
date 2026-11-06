@@ -22,6 +22,9 @@ repo/
 └── projects/
     └── <project_name>/
         ├── run_<project_name>.sh  runner script: reproduces the MaxQuant run
+        ├── get_data_<project_name>.sh  optional: downloads public data (section 6)
+        ├── data_manifest.tsv      optional: sizes and checksums of the downloaded files
+        ├── make_parameters_<project_name>.sh  optional: creates parameter/ from a deposited mqpar.xml
         ├── data/                  .raw files and FASTA file(s), input only
         ├── parameter/             mqpar.xml, design.txt
         ├── results/               MaxQuant output, run log, run info
@@ -158,6 +161,8 @@ docker run --rm --platform linux/amd64 -v "$(pwd)/$P":/work maxquant:2.9.0 \
 
 Only standard DDA on Thermo Orbitrap data has been tested with this image.
 
+`--create` takes the raw files from `--pathRawFileFolder`, not from `design.txt`: a raw file missing from `design.txt` gets an empty experiment name without a warning, and a `design.txt` row without a raw file is dropped. `--create` and `--dryrun` do not open raw files (the FASTA files must exist), so parameters can be prepared against empty placeholder files named after `design.txt` before a download has finished. Example: `projects/Bergant_2023/make_parameters_Bergant_2023.sh`.
+
 ### Output location
 
 The mqpar.xml of MaxQuant 2.9.0 has no parameter for the location of `combined/`. MaxQuant writes `combined/` into the raw file folder, `data/`, together with per-raw-file working folders and `.index` files next to the raw files. After a successful run, the runner script moves `data/combined/` to `results/combined/` (section 5).
@@ -215,7 +220,7 @@ sed -i '' -e '/<variableModifications>/,/<\/variableModifications>/{' -e '/<stri
 
 ### Reusing an existing mqpar.xml
 
-1. Check `<maxQuantVersion>`. It must be 2.9.0.x for this image. Otherwise generate a new file and transfer the non-default settings.
+1. Check `<maxQuantVersion>`. It must be 2.9.0.x for this image. Otherwise generate a new file and transfer the non-default settings. Example: `projects/Bergant_2023/` (authors' mqpar.xml of MaxQuant 1.5.6.2, transferred by `make_parameters_Bergant_2023.sh`).
 2. Check that all paths are `/work/...` paths and point to existing files.
 3. Check that `<filePaths>` lists exactly the raw files of this dataset and `<experiments>` the intended sample names, in the same order.
 4. To update FASTA and raw paths in one step (arguments: new file, FASTA folder, raw folder):
@@ -297,10 +302,11 @@ cat -t $P/parameter/design.txt
 
 1. Checks prerequisites: Docker available, image present, `mqpar.xml` and `design.txt` present, every raw and FASTA path in `mqpar.xml` is a `/work/...` path to an existing file.
 2. Refuses to overwrite existing results unless called with `CLEAN=1`. With `CLEAN=1`, it deletes `results/combined/` and MaxQuant's working files in `data/` (per-raw-file folders, `.index` files, MaxQuant's mqpar copy). It never touches raw or FASTA files.
-3. Runs `--dryrun` as a fast parameter check.
-4. Writes `results/run_info.txt`: date, image ID, MaxQuant version, SHA-256 checksums of `mqpar.xml`, `design.txt`, raw files and FASTA files. The checksums prove which exact inputs produced the results.
-5. Runs MaxQuant in the container and writes the full log to `results/maxquant_run.log`.
-6. Moves `combined/` from `data/` to `results/` (MaxQuant 2.9.0 always writes it into `data/`).
+3. Checks free disk space: MaxQuant's working files and `combined/` need up to 2.2 times the size of the raw files. With less free space it stops, unless called with `SKIP_DISK_CHECK=1`. A run that fills the disk fails hours in.
+4. Runs `--dryrun` as a fast parameter check.
+5. Writes `results/run_info.txt`: date, image ID, MaxQuant version, SHA-256 checksums of `mqpar.xml`, `design.txt`, raw files and FASTA files. The checksums prove which exact inputs produced the results.
+6. Runs MaxQuant in the container and writes the full log to `results/maxquant_run.log`.
+7. Moves `combined/` from `data/` to `results/` (MaxQuant 2.9.0 always writes it into `data/`).
 
 It does not run downstream analysis. QC and statistics belong in `analysis_of_results/`.
 
@@ -310,12 +316,14 @@ It does not run downstream analysis. QC and statistics belong in `analysis_of_re
 - The script determines its own location, so it works from any working directory.
 - No project-specific settings in the script beyond what is listed in its header. Analysis settings belong in `mqpar.xml`.
 - Change the script only when the run procedure changes, not for parameter changes.
+- Never edit or overwrite a runner script while it runs. Bash reads a script while executing it and, after MaxQuant finishes, continues at the old byte position in the changed file: the final step (moving `combined/` to `results/`) is then lost or replaced by other commands. Before changing a runner, check that no run of that project is active: `pgrep -fl run_<project_name>.sh` and `docker ps --filter name=mq_<project_name>`.
 
 ### Usage
 
 ```bash
 projects/<project_name>/run_<project_name>.sh                # first run
 CLEAN=1 projects/<project_name>/run_<project_name>.sh        # rerun, deletes previous results
+SKIP_DISK_CHECK=1 projects/<project_name>/run_<project_name>.sh   # start despite the disk space check
 ```
 
 Long runs: start in the background and follow the log:
@@ -328,7 +336,7 @@ tail -f $P/results/maxquant_run.log
 docker ps --filter name=mq_<project_name>                    # still running?
 ```
 
-`nohup.out` holds the runner's own messages. If a check fails before MaxQuant starts (steps 1 to 3), the error appears only there, and `maxquant_run.log` is not written.
+`nohup.out` holds the runner's own messages. If a check fails before MaxQuant starts (steps 1 to 4), the error appears only there, and `maxquant_run.log` is not written.
 
 A finished run ends with `Finish writing tables` in the log. On failure, the log names a job. Details are in `combined/proc/<job>.error.txt`: under `data/` if the script stopped before moving `combined/`, otherwise under `results/`. The Mac must stay awake during a run, since sleep pauses the container.
 
@@ -339,8 +347,9 @@ For a new project, copy this file to `projects/<project_name>/run_<project_name>
 ```bash
 #!/usr/bin/env bash
 # Reproducible MaxQuant run for one project.
-# Usage:  ./run_<project>.sh          first run
-#         CLEAN=1 ./run_<project>.sh  rerun, deletes previous results
+# Usage:  ./run_<project>.sh                    first run
+#         CLEAN=1 ./run_<project>.sh            rerun, deletes previous results
+#         SKIP_DISK_CHECK=1 ./run_<project>.sh  start despite too little free disk space
 # Details: maxquant_intro.md, section 5
 set -euo pipefail
 
@@ -373,6 +382,8 @@ while IFS= read -r p; do
 done <<< "$mq_paths"
 
 # 2. previous results
+# a manual --dryrun leaves an empty data/combined/proc; rmdir removes only empty folders
+rmdir data/combined/proc data/combined 2>/dev/null || true
 if [[ -d results/combined || -d data/combined ]]; then
   [[ "${CLEAN:-0}" == "1" ]] || fail "previous results exist, rerun with CLEAN=1 to delete them"
   echo "CLEAN=1: removing previous results and MaxQuant working files"
@@ -385,11 +396,25 @@ if [[ -d results/combined || -d data/combined ]]; then
 fi
 mkdir -p "$RESULTS"
 
-# 3. parameter check
+# 3. disk space: MaxQuant's working files and combined/ need up to 2.2 times the raw data
+raw_kb="$(du -ck data/*.raw | tail -1 | cut -f1)"
+need_kb=$(( raw_kb * 22 / 10 ))
+free_kb="$(df -Pk data | awk 'NR == 2 { print $4 }')"
+disk="$(awk -v n="$need_kb" -v r="$raw_kb" -v f="$free_kb" 'BEGIN {
+  printf "about %.1f GB needed (2.2 x %.1f GB raw data), %.1f GB free", n / 1e6, r / 1e6, f / 1e6 }')"
+if (( free_kb < need_kb )); then
+  [[ "${SKIP_DISK_CHECK:-0}" == "1" ]] \
+    || fail "not enough disk space: $disk; free space, or rerun with SKIP_DISK_CHECK=1"
+  echo "WARNING: not enough disk space: $disk; SKIP_DISK_CHECK=1, starting anyway"
+else
+  echo "disk space: $disk"
+fi
+
+# 4. parameter check
 echo "dry run ..."
 mq "$MQPAR" --dryrun > "$RESULTS/dryrun.txt" 2>&1 || fail "dry run failed, see results/dryrun.txt"
 
-# 4. run info
+# 5. run info
 {
   echo "project:       $PROJECT_NAME"
   echo "date (UTC):    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -405,12 +430,12 @@ mq "$MQPAR" --dryrun > "$RESULTS/dryrun.txt" 2>&1 || fail "dry run failed, see r
   done
 } > "$RESULTS/run_info.txt" || true
 
-# 5. MaxQuant
+# 6. MaxQuant
 echo "MaxQuant running, log: results/maxquant_run.log"
 docker run --rm --name "$CONTAINER" --platform linux/amd64 \
   -v "$PROJECT_DIR":/work "$IMAGE" "$MQPAR" 2>&1 | tee "$LOG"
 
-# 6. collect output
+# 7. collect output
 if [[ -d data/combined && ! -d results/combined ]]; then
   mv data/combined results/combined
 fi
@@ -426,13 +451,15 @@ Notes on the template:
 - Messages name paths relative to the project folder, never complete host paths (section 9).
 - Checksumming large raw files takes a few seconds per GB.
 - MaxQuant's `.index` files must be deleted on reruns, since a broken index from a failed run can be reused silently.
+- `--dryrun` creates an empty `data/combined/proc`. Without the `rmdir` line, a manual dry run before the first run would make the script report "previous results exist".
+- The disk space check runs after the `CLEAN=1` cleanup, so space freed by deleting previous results counts. The factor 2.2 is the larger of the two values measured in the tutorial projects (1.6 and 2.2 times the raw data). It is an estimate: the true need can be lower, which `SKIP_DISK_CHECK=1` allows for, at the risk of a run that fails when the disk is full.
 
 ---
 
 ## 6. Agent workflow for a new dataset
 
 1. Check that the Docker image exists (section 1).
-2. Inventory `data/`: raw files, FASTA files, sizes. A raw file of a few KB is a failed download.
+2. Inventory `data/`: raw files, FASTA files, sizes. A raw file of a few KB is a failed download. For a public dataset (for example PRIDE), download it with a script `get_data_<project_name>.sh` that checks each file's size and checksum and records them in a committed `data_manifest.tsv`, so the inputs can be fetched and verified again. Example: `projects/Liljedahl_2017/`. Check disk space first: MaxQuant's working files in `data/` and `combined/` need another 1.6 to 2.2 times the raw data size (measured in the tutorial projects), on top of the raw files.
 3. Check every FASTA file:
 
 ```bash
@@ -527,7 +554,10 @@ Use an absolute path. With a relative path, report rendering fails. Install once
 |---|---|
 | `Could not load file or assembly 'ThermoFisher.CommonCore.RawFileReader'` | MaxQuant was run natively on macOS. Use the container. |
 | `... does not exist` for a path | Host path instead of `/work/...`, or the file is outside the mounted project folder. |
+| `no .raw files in data/` from the runner, although raw files are there | Upper-case extension `.RAW`, as in many PRIDE datasets. The runner's `data/*.raw` pattern is case-sensitive. Save or rename the files as `.raw`. |
 | `previous results exist` from the runner | Results from an earlier run. Confirm with the user, then rerun with `CLEAN=1`. |
+| `not enough disk space` from the runner | Free space on the disk that holds the project, for example MaxQuant's working files in `data/` of finished projects (their results stay; a rerun with `CLEAN=1` recreates them). Ask the user before deleting anything. `SKIP_DISK_CHECK=1` starts anyway. |
+| Deleting files frees less disk space than expected | Docker Desktop's Linux VM keeps files open that a container has used, even after they are deleted on the Mac (`lsof +L1 \| grep <project_name>` lists them). Release them by dropping the VM's caches: `docker run --rm --privileged --platform linux/amd64 --entrypoint sh maxquant:2.9.0 -c 'sync; echo 3 > /proc/sys/vm/drop_caches'`. This can also hide the space freed by `CLEAN=1` from the runner's disk space check. |
 | `zsh: no matches found` | zsh aborts a command when a wildcard matches nothing. Name files explicitly, or use the bash runner script. |
 | A job fails | Read `combined/proc/<job>.error.txt`. |
 | Run is slow | x64 emulation costs speed. Check that Docker Desktop uses Rosetta (Settings → General), and check CPU and memory (Settings → Resources). |
