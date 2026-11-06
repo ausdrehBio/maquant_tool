@@ -22,8 +22,10 @@ FINISHED="data/combined/proc/#runningTimes.txt"  # MaxQuant's list of finished j
 
 cd "$PROJECT_DIR"
 fail() { echo "ERROR: $*" >&2; exit 1; }
+# --ulimit nofile=-1:-1: open-files limit as high as this process may set it; a fixed
+# default_ulimits in a server's containers.conf can exceed that, and the container fails to start
 mq() { podman run --rm --pull never --platform linux/amd64 --security-opt label=disable \
-         -v "$PROJECT_DIR":/work "$IMAGE" "$@"; }
+         --ulimit nofile=-1:-1 -v "$PROJECT_DIR":/work "$IMAGE" "$@"; }
 sha256() { if command -v sha256sum > /dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 # id of a job in results/dryrun.txt; names are compared without spaces and punctuation, since
 # MaxQuant's proc files write "MS/MS main search" as MSMS_main_search. Only lines with a numeric
@@ -199,7 +201,8 @@ else
     echo "MaxQuant continuing at job $resume of $n_jobs, log: results/maxquant_run.log"
   fi
   podman run --rm --name "$CONTAINER" --pull never --platform linux/amd64 --security-opt label=disable \
-    -v "$PROJECT_DIR":/work "$IMAGE" "$MQPAR_RUN" --partial-processing="${resume:-1}" 2>&1 | tee -a "$LOG" \
+    --ulimit nofile=-1:-1 -v "$PROJECT_DIR":/work "$IMAGE" \
+    "$MQPAR_RUN" --partial-processing="${resume:-1}" 2>&1 | tee -a "$LOG" \
     || fail "MaxQuant stopped before the end, see results/maxquant_run.log; run this script again to continue"
 fi
 

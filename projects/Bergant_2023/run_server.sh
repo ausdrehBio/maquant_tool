@@ -88,14 +88,15 @@ log "conda environment $env_name active"
 for tool in podman curl python3 shasum; do
   command -v "$tool" > /dev/null || die "$tool not found after activating $env_name"
 done
-# MaxQuantCmd prints its version on stderr and exits with 1; podman warnings can come before it
-out="$(podman run --rm --pull never --platform linux/amd64 "$IMAGE" --version 2>&1 || true)"
+# MaxQuantCmd prints its version on stderr and exits with 1; podman warnings can come before it.
+# --ulimit nofile=-1:-1 as in run_<project>.sh: a server's default_ulimits can exceed the job's limit
+out="$(podman run --rm --pull never --platform linux/amd64 --ulimit nofile=-1:-1 "$IMAGE" --version 2>&1 || true)"
 version="$(printf '%s\n' "$out" | grep -m1 '^MaxQuantCmd' || true)"
 [[ "$version" == "MaxQuantCmd 2.9.0"* ]] \
   || die "the MaxQuant image does not start; podman's output:"$'\n'"$(printf '%s\n' "$out" | tail -20)"
 probe=".podman_write_test"
 rm -f "$PROJECT_DIR/$probe"
-podman run --rm --pull never --platform linux/amd64 --security-opt label=disable \
+podman run --rm --pull never --platform linux/amd64 --security-opt label=disable --ulimit nofile=-1:-1 \
   -v "$PROJECT_DIR":/work --entrypoint sh "$IMAGE" -c "touch /work/$probe" \
   || die "podman cannot write to the mounted project folder"
 if [[ ! -O "$PROJECT_DIR/$probe" ]]; then

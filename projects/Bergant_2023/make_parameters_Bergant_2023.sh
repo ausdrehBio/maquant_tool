@@ -99,7 +99,7 @@ for db in "${FASTA_FILES[@]}"; do
   fasta_args+=("/work/data/$db")
 done
 mq_tmp() { podman run --rm --pull never --platform linux/amd64 --security-opt label=disable \
-             -v "$tmp":/work "$IMAGE" "$@"; }
+             --ulimit nofile=-1:-1 -v "$tmp":/work "$IMAGE" "$@"; }
 mq_tmp --create --newMqpar /work/parameter/mqpar.xml \
   --LCMSType ST --instrumentType TO \
   --pathFasta "${fasta_args[@]}" \

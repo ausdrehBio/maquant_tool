@@ -94,7 +94,7 @@ projects/
 
 ```bash
 podman build --platform linux/amd64 -t localhost/maxquant:2.9.0 .
-podman run --rm --pull never --platform linux/amd64 localhost/maxquant:2.9.0 --version   # expect: MaxQuantCmd 2.9.0.0 (on stderr)
+podman run --rm --pull never --platform linux/amd64 --ulimit nofile=-1:-1 localhost/maxquant:2.9.0 --version   # expect: MaxQuantCmd 2.9.0.0 (on stderr)
 ```
 
 The build pulls the .NET 8 base image from `mcr.microsoft.com` once, so it needs internet access.
@@ -122,7 +122,7 @@ For generating, editing and checking parameter files (sections 3 and 4). Run fro
 ```bash
 P=projects/<project_name>
 mq() { podman run --rm --pull never --platform linux/amd64 --security-opt label=disable \
-         -v "$(pwd)/$P":/work localhost/maxquant:2.9.0 "$@"; }
+         --ulimit nofile=-1:-1 -v "$(pwd)/$P":/work localhost/maxquant:2.9.0 "$@"; }
 mq <MaxQuant arguments>
 ```
 
@@ -131,6 +131,7 @@ mq <MaxQuant arguments>
 | `--pull never` | use the local image, never contact a registry |
 | `--platform linux/amd64` | MaxQuant's platform; emulated on the Mac, native on x86_64 servers |
 | `--security-opt label=disable` | on servers with SELinux, the mounted project folder is otherwise not accessible; no effect elsewhere |
+| `--ulimit nofile=-1:-1` | open-files limit in the container: the highest the user may set (`-1` means the podman process's own maximum). A server's `containers.conf` can set a fixed higher default (`default_ulimits`), which rootless podman cannot apply: the container then fails with `crun: setrlimit RLIMIT_NOFILE: Operation not permitted`. On the Mac the limit stays the same. |
 
 `ENTRYPOINT` already calls `MaxQuantCmd.dll`, so only MaxQuant's arguments follow the image name. All MaxQuant options: `mq --help`.
 
@@ -400,8 +401,10 @@ FINISHED="data/combined/proc/#runningTimes.txt"  # MaxQuant's list of finished j
 
 cd "$PROJECT_DIR"
 fail() { echo "ERROR: $*" >&2; exit 1; }
+# --ulimit nofile=-1:-1: open-files limit as high as this process may set it; a fixed
+# default_ulimits in a server's containers.conf can exceed that, and the container fails to start
 mq() { podman run --rm --pull never --platform linux/amd64 --security-opt label=disable \
-         -v "$PROJECT_DIR":/work "$IMAGE" "$@"; }
+         --ulimit nofile=-1:-1 -v "$PROJECT_DIR":/work "$IMAGE" "$@"; }
 sha256() { if command -v sha256sum > /dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 # id of a job in results/dryrun.txt; names are compared without spaces and punctuation, since
 # MaxQuant's proc files write "MS/MS main search" as MSMS_main_search. Only lines with a numeric
@@ -577,7 +580,8 @@ else
     echo "MaxQuant continuing at job $resume of $n_jobs, log: results/maxquant_run.log"
   fi
   podman run --rm --name "$CONTAINER" --pull never --platform linux/amd64 --security-opt label=disable \
-    -v "$PROJECT_DIR":/work "$IMAGE" "$MQPAR_RUN" --partial-processing="${resume:-1}" 2>&1 | tee -a "$LOG" \
+    --ulimit nofile=-1:-1 -v "$PROJECT_DIR":/work "$IMAGE" \
+    "$MQPAR_RUN" --partial-processing="${resume:-1}" 2>&1 | tee -a "$LOG" \
     || fail "MaxQuant stopped before the end, see results/maxquant_run.log; run this script again to continue"
 fi
 
@@ -754,6 +758,7 @@ Every message has the form `[HH:MM:SS] step` or `[HH:MM:SS] ERROR: ...`, so a ha
 - If compute nodes have no internet, run `--download-only` on the login node first.
 - Podman stores images per user, in the folder that `podman info --format '{{.Store.GraphRoot}}'` prints. If it differs between the login node and the compute nodes, each node needs its own image, which `setup.sh` then builds there.
 - A batch job inherits `XDG_RUNTIME_DIR=/run/user/<uid>` from the login session, but on a compute node without a login session this folder does not exist, and rootless podman cannot use it. `run_server.sh` unsets the variable; podman then keeps its runtime files in `$TMPDIR` or `/tmp`. For podman commands typed by hand in a batch job, run `unset XDG_RUNTIME_DIR` first.
+- A server's `/etc/containers/containers.conf` can set `default_ulimits` above a batch job's open-files limit (seen: `nofile=1048576` against 131072). Rootless podman cannot apply it, and the container does not start. The scripts pass `--ulimit nofile=-1:-1`, which replaces the configured value with the job's own limit (section 2).
 - Without a systemd login session, every podman call prints warnings such as `The cgroupv2 manager is set to systemd but there is no systemd user session available` and `Falling back to --cgroup-manager=cgroupfs`, and the first call on a node also prints `Failed to add pause process to systemd sandbox cgroup`. They are harmless: podman switches to cgroupfs by itself. They also land at the top of `results/dryrun.txt` and `results/maxquant_run.log`, and the scripts ignore them there. To silence the cgroup warnings, add the following to `~/.config/containers/containers.conf` (a per-user setting; the scripts do not change it):
 
   ```toml
@@ -796,6 +801,7 @@ grep "^$USER:" /etc/subuid /etc/subgid
 | `files written in the container do not belong to you` | Podman does not run rootless, or the user has no entries in `/etc/subuid` and `/etc/subgid` (section 8). |
 | `podman cannot write to the mounted project folder` | Missing write permission on the project folder, or a security module other than SELinux blocks the mount. Run the failing `podman run` command by hand to see the error. |
 | Podman warnings or errors about `XDG_RUNTIME_DIR` or `/run/user/<uid>` | The variable points to a folder that does not exist, as in batch jobs without a login session. `run_server.sh` unsets it (section 8, batch jobs); before podman commands typed by hand, run `unset XDG_RUNTIME_DIR`. |
+| `crun: setrlimit RLIMIT_NOFILE: Operation not permitted: OCI permission denied` | `default_ulimits` in the server's `containers.conf` is higher than the user's open-files limit (`ulimit -Hn`). The scripts pass `--ulimit nofile=-1:-1` (section 2); add it to podman commands typed by hand. `--ulimit host` does not help, because podman applies the configured value anyway. |
 | Podman warnings `no systemd user session available`, `Falling back to --cgroup-manager=cgroupfs` | Harmless; podman uses cgroupfs instead. To silence them, see section 8, batch jobs. |
 | `zsh: no matches found` | zsh aborts a command when a wildcard matches nothing. Name files explicitly, or use the bash runner script. |
 | A job fails | Read `combined/proc/<job>.error.txt`. |
