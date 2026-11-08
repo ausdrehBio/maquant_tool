@@ -69,6 +69,19 @@ if [[ -n "${XDG_RUNTIME_DIR:-}" && ! -w "$XDG_RUNTIME_DIR" ]]; then
   log "XDG_RUNTIME_DIR $XDG_RUNTIME_DIR is missing or not writable (no login session): unset for podman"
   unset XDG_RUNTIME_DIR
 fi
+# when a job ends while a container runs (SLURM time limit, scancel), podman keeps listing the
+# container as running and then refuses every command ("invalid internal status ... podman
+# system migrate"); podman system migrate marks it as stopped. A container that really runs
+# would let the command succeed, so migrate only runs when every listed container is gone.
+if ! out="$(podman ps -a -q 2>&1 > /dev/null)"; then
+  [[ "$out" == *"system migrate"* ]] \
+    || die "podman does not work; podman's output:"$'\n'"$(printf '%s\n' "$out" | tail -20)"
+  log "podman lists a container from an earlier, ended job as running: podman system migrate"
+  podman system migrate 2>&1 | grep -v 'level=warning' || true
+  out="$(podman ps -a -q 2>&1 > /dev/null)" \
+    || die "podman does not work after podman system migrate:"$'\n'"$(printf '%s\n' "$out" | tail -20)"
+  log "podman state reset"
+fi
 
 # 3. micromamba or conda, conda environment, MaxQuant image
 log "setup.sh"
