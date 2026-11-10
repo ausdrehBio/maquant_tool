@@ -329,13 +329,19 @@ cat -t $P/parameter/design.txt
 
      Markers and error files of the interrupted job are removed before the restart. The error itself stays in `results/maxquant_run.log`.
    - `--clean` deletes `results/combined/` and MaxQuant's working files in `data/` (per-raw-file folders, `.index` files, the mqpar copies). It never touches raw or FASTA files.
-3. Checks free disk space: MaxQuant's working files and `combined/` need up to 2.2 times the size of the raw files, minus what a continued run has already written. With less free space it stops, unless called with `--skip-disk-check`. A run that fills the disk fails hours in.
+3. Checks free disk space: MaxQuant's working files and `combined/` need up to 2.2 times the size of the raw files, minus what a continued run has already written. With less free space it stops, unless called with `--skip-disk-check`. A run that fills the disk fails hours in. With `--workdir`, the check applies to the work folder and adds the input files still to be copied, which are then copied.
 4. Writes `data/mqpar_run.xml`, a copy of `mqpar.xml` with this run's thread count: `--threads N`, otherwise the CPUs of the SLURM job (`SLURM_CPUS_PER_TASK`), otherwise `numThreads` from `mqpar.xml`. The thread count changes only the speed, not the results. A new run then checks the parameters with `--dryrun`.
-5. Writes `results/run_info.txt`: date, image ID, MaxQuant version, threads, SHA-256 checksums of `mqpar.xml`, `design.txt`, raw files and FASTA files. The checksums prove which exact inputs produced the results. A continued run appends one line.
+5. Writes `results/run_info.txt`: date, image ID, MaxQuant version, threads, SHA-256 checksums of `mqpar.xml`, `design.txt`, raw files and FASTA files. The checksums prove which exact inputs produced the results. A continued run appends one line. With `--workdir`, the checksums are those of the copies MaxQuant read, and a line `inputs: copies in a work folder (--workdir)` says so.
 6. Runs MaxQuant in the container and writes the full log to `results/maxquant_run.log` (appended when continued).
-7. Moves `combined/` from `data/` to `results/` (MaxQuant 2.9.0 always writes it into `data/`).
+7. Moves `combined/` from `data/` to `results/` (MaxQuant 2.9.0 always writes it into `data/`). With `--workdir`, it copies `combined/` to `results/` and then deletes the work folder.
 
 It does not run downstream analysis. QC and statistics belong in `analysis_of_results/`.
+
+With `--workdir DIR`, MaxQuant runs on copies of the input files in a folder of its own, `DIR/maxquant_<uid>_<project_name>/`, for example on a compute node's local disk when the project folder is on slow storage (section 8, batch jobs). That folder is mounted at `/work` instead of the project folder:
+- The runner copies the raw and FASTA files listed in `mqpar.xml` there. A copy with the size of the original counts as done, so a rerun copies only what is missing.
+- MaxQuant writes its working files and `combined/` there. `results/`, with the log, `run_info.txt` and `dryrun.txt`, stays in the project folder.
+- An unfinished run can only be continued where its work folder is: on the same node, with the same `--workdir`. Anywhere else the runner starts a new run.
+- An unfinished run in the project folder's `data/combined/` blocks `--workdir`. Continue it without `--workdir`, or delete it with `--clean`.
 
 ### Rules
 
@@ -352,6 +358,7 @@ projects/<project_name>/run_<project_name>.sh                     # first run, o
 projects/<project_name>/run_<project_name>.sh --clean             # rerun from job 1, deletes previous results
 projects/<project_name>/run_<project_name>.sh --threads 16        # thread count for this run
 projects/<project_name>/run_<project_name>.sh --skip-disk-check   # start despite the disk space check
+projects/<project_name>/run_<project_name>.sh --workdir /tmp      # run on copies in a local folder (servers)
 ```
 
 `CLEAN=1` and `SKIP_DISK_CHECK=1` work like `--clean` and `--skip-disk-check`.
@@ -379,12 +386,15 @@ For a new project, copy this file to `projects/<project_name>/run_<project_name>
 ```bash
 #!/usr/bin/env bash
 # Reproducible MaxQuant run for one project, in podman.
-# Usage:  ./run_<project>.sh [--clean] [--threads N] [--skip-disk-check]
+# Usage:  ./run_<project>.sh [--clean] [--threads N] [--skip-disk-check] [--workdir DIR]
 #   no option          first run; continues an unfinished run (crash, stop, SLURM time limit)
 #                      if parameter/mqpar.xml and design.txt are unchanged
 #   --clean            deletes previous results and MaxQuant working files, starts at job 1
 #   --threads N        MaxQuant threads (default: $SLURM_CPUS_PER_TASK, else numThreads in mqpar.xml)
 #   --skip-disk-check  starts despite too little free disk space
+#   --workdir DIR      runs MaxQuant on copies of the input files in DIR, for example on a compute
+#                      node's local disk when the project folder is on slow storage; combined/ is
+#                      copied to results/, and the copies are deleted after a finished run
 #   CLEAN=1 and SKIP_DISK_CHECK=1 work like --clean and --skip-disk-check.
 # Details: maxquant_intro.md, section 5
 set -euo pipefail
@@ -397,15 +407,29 @@ MQPAR_HOST="$PROJECT_DIR/parameter/mqpar.xml"
 MQPAR_RUN="/work/data/mqpar_run.xml"            # mqpar.xml with this run's thread count
 RESULTS="$PROJECT_DIR/results"
 LOG="$RESULTS/maxquant_run.log"
-FINISHED="data/combined/proc/#runningTimes.txt"  # MaxQuant's list of finished jobs
 
 cd "$PROJECT_DIR"
 fail() { echo "ERROR: $*" >&2; exit 1; }
+# $work is the folder mounted as /work: the project folder, or its copy with --workdir.
 # --ulimit nofile=-1:-1: open-files limit as high as this process may set it; a fixed
 # default_ulimits in a server's containers.conf can exceed that, and the container fails to start
 mq() { podman run --rm --pull never --platform linux/amd64 --security-opt label=disable \
-         --ulimit nofile=-1:-1 -v "$PROJECT_DIR":/work "$IMAGE" "$@"; }
+         --ulimit nofile=-1:-1 -v "$work":/work "$IMAGE" "$@"; }
 sha256() { if command -v sha256sum > /dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+# true if file $2 exists and has the size of file $1
+same_size() { [[ -f "$2" && "$(wc -c < "$1" | tr -d ' ')" == "$(wc -c < "$2" | tr -d ' ')" ]]; }
+# MaxQuant's working files in a data folder: combined/, a folder and an .index file per raw
+# file, the mqpar copies. Raw and FASTA files stay.
+remove_working_files() {
+  local d="$1" raw
+  rm -rf "$d/combined"
+  for raw in "$d"/*.raw; do
+    [[ -e "$raw" ]] || continue
+    rm -rf "${raw%.raw}"
+    rm -f "${raw%.raw}.index"
+  done
+  rm -f "$d/mqpar.xml" "$d/mqpar_run.xml"
+}
 # id of a job in results/dryrun.txt; names are compared without spaces and punctuation, since
 # MaxQuant's proc files write "MS/MS main search" as MSMS_main_search. Only lines with a numeric
 # id count: the header and podman warnings (servers without a login session) are skipped.
@@ -417,6 +441,7 @@ job_id() {
 clean="${CLEAN:-0}"
 skip_disk="${SKIP_DISK_CHECK:-0}"
 threads="${SLURM_CPUS_PER_TASK:-}"
+workdir=""
 while (( $# > 0 )); do
   case "$1" in
     --clean) clean=1 ;;
@@ -425,10 +450,31 @@ while (( $# > 0 )); do
       [[ "${2:-}" =~ ^[1-9][0-9]*$ ]] || fail "--threads needs a positive number"
       threads="$2"
       shift ;;
+    --workdir)
+      [[ -n "${2:-}" ]] || fail "--workdir needs a folder"
+      workdir="$2"
+      shift ;;
     *) fail "unknown option: $1 (usage at the top of run_$PROJECT_NAME.sh)" ;;
   esac
   shift
 done
+
+# the folder mounted as /work. With --workdir, a folder of its own in DIR holds copies of the
+# raw and FASTA files and all of MaxQuant's working files; results/ stays in the project folder.
+work="$PROJECT_DIR"
+copy_mode=0
+if [[ -n "$workdir" ]]; then
+  [[ -d "$workdir" && -w "$workdir" ]] || fail "--workdir $workdir is not a writable folder"
+  work_name="maxquant_$(id -u)_$PROJECT_NAME"
+  work="$(cd "$workdir" && pwd)/$work_name"
+  copy_mode=1
+  echo "work folder: $work_name in $workdir on $(uname -n)"
+fi
+FINISHED="$work/data/combined/proc/#runningTimes.txt"  # MaxQuant's list of finished jobs
+continue_hint="run this script again to continue"
+if (( copy_mode )); then
+  continue_hint="run this script again with --workdir $workdir on $(uname -n) to continue"
+fi
 
 # 1. prerequisites
 command -v podman > /dev/null || fail "podman not found"
@@ -442,7 +488,7 @@ mq_paths="$(sed -n -e 's|.*<fastaFilePath>\(.*\)</fastaFilePath>.*|\1|p' \
 [[ -n "$mq_paths" ]] || fail "no raw or FASTA paths found in mqpar.xml"
 while IFS= read -r p; do
   [[ "$p" == /work/* ]] || fail "mqpar.xml path is not a /work/... path: $p"
-  [[ -e "$PROJECT_DIR/${p#/work/}" ]] || fail "mqpar.xml path does not exist in the project: $p"
+  [[ -f "$PROJECT_DIR/${p#/work/}" ]] || fail "mqpar.xml path does not exist in the project: $p"
 done <<< "$mq_paths"
 mqpar_threads="$(sed -n 's|.*<numThreads>\([0-9]*\)</numThreads>.*|\1|p' "$MQPAR_HOST")"
 [[ "$mqpar_threads" =~ ^[0-9]+$ ]] || fail "mqpar.xml needs exactly one <numThreads>"
@@ -450,21 +496,22 @@ threads="${threads:-$mqpar_threads}"
 
 # 2. previous results: --clean deletes them, an unfinished run with unchanged parameters continues
 # a manual --dryrun leaves an empty data/combined/proc; rmdir removes only empty folders
-rmdir data/combined/proc data/combined 2>/dev/null || true
+for d in "$PROJECT_DIR" "$work"; do
+  rmdir "$d/data/combined/proc" "$d/data/combined" 2>/dev/null || true
+done
 resume=""   # job id to continue at; empty for a new run
 if [[ "$clean" == "1" ]]; then
-  if [[ -d results/combined || -d data/combined ]]; then
+  if [[ -d results/combined || -d data/combined || -d "$work/data/combined" ]]; then
     echo "--clean: removing previous results and MaxQuant working files"
-    rm -rf results/combined data/combined
-    for raw in data/*.raw; do
-      rm -rf "${raw%.raw}"
-      rm -f "${raw%.raw}.index"
-    done
-    rm -f data/mqpar.xml data/mqpar_run.xml
+    rm -rf results/combined results/combined.part
+    remove_working_files data
+    if (( copy_mode )); then remove_working_files "$work/data"; fi
   fi
 elif [[ -d results/combined ]]; then
   fail "a finished run exists in results/combined; rerun with --clean to delete it and start again"
-elif [[ -d data/combined ]]; then
+elif (( copy_mode )) && [[ -d data/combined ]]; then
+  fail "data/combined in the project folder holds an unfinished run; continue it without --workdir, or rerun with --clean to delete it"
+elif [[ -d "$work/data/combined" ]]; then
   for f in parameter/mqpar.xml parameter/design.txt; do
     recorded="$(awk -v f="$f" '$2 == f { print $1 }' results/run_info.txt 2>/dev/null || true)"
     [[ -n "$recorded" && "$(sha256 "$f" | cut -d' ' -f1)" == "$recorded" ]] \
@@ -478,8 +525,8 @@ elif [[ -d data/combined ]]; then
   fi
   # a failed job leaves "<job> <n>.error.txt" in proc and is listed as finished all the same
   failed=""
-  if [[ -d data/combined/proc ]]; then
-    failed="$(find data/combined/proc -maxdepth 1 -name '*.error.txt' \
+  if [[ -d "$work/data/combined/proc" ]]; then
+    failed="$(find "$work/data/combined/proc" -maxdepth 1 -name '*.error.txt' \
       | sed -e 's|.*/||' -e 's/ [0-9]*\.error\.txt$//' | head -1 || true)"
   fi
   if [[ -n "$failed" ]]; then
@@ -496,18 +543,22 @@ elif [[ -d data/combined ]]; then
     echo "unfinished run: continuing at job $resume (last finished: $last)"
   fi
   # markers and error files of the interrupted job; MaxQuant writes new ones
-  if [[ -d data/combined/proc ]]; then
-    find data/combined/proc -maxdepth 1 -type f ! -name '#runningTimes.txt' -delete
+  if [[ -d "$work/data/combined/proc" ]]; then
+    find "$work/data/combined/proc" -maxdepth 1 -type f ! -name '#runningTimes.txt' -delete
   fi
+elif (( copy_mode )) && [[ -f results/run_info.txt ]]; then
+  # a run interrupted on another node left its work folder there
+  echo "no unfinished run in the work folder on $(uname -n); starting a new run"
 fi
 mkdir -p "$RESULTS"
 
-# 3. disk space: MaxQuant's working files and combined/ need up to 2.2 times the raw data
+# 3. disk space: MaxQuant's working files and combined/ need up to 2.2 times the raw data; with
+# --workdir, the work folder also needs room for the input files not yet copied there
 raw_kb="$(du -ck data/*.raw | tail -1 | cut -f1)"
 used_kb=0
 if [[ -n "$resume" ]]; then
-  used_kb="$(du -sk data/combined | cut -f1)"
-  for raw in data/*.raw; do
+  used_kb="$(du -sk "$work/data/combined" | cut -f1)"
+  for raw in "$work"/data/*.raw; do
     for w in "${raw%.raw}" "${raw%.raw}.index"; do
       if [[ -e "$w" ]]; then used_kb=$(( used_kb + $(du -sk "$w" | cut -f1) )); fi
     done
@@ -515,11 +566,23 @@ if [[ -n "$resume" ]]; then
 fi
 need_kb=$(( raw_kb * 22 / 10 - used_kb ))
 if (( need_kb < 0 )); then need_kb=0; fi
-free_kb="$(df -Pk data | awk 'NR == 2 { print $4 }')"
-disk="$(awk -v n="$need_kb" -v r="$raw_kb" -v u="$used_kb" -v f="$free_kb" 'BEGIN {
+copy_kb=0
+if (( copy_mode )); then
+  while IFS= read -r p; do
+    if ! same_size "$PROJECT_DIR/${p#/work/}" "$work/${p#/work/}"; then
+      copy_kb=$(( copy_kb + $(du -k "$PROJECT_DIR/${p#/work/}" | cut -f1) ))
+    fi
+  done <<< "$mq_paths"
+  need_kb=$(( need_kb + copy_kb ))
+  mkdir -p "$work/data"
+fi
+free_kb="$(df -Pk "$work/data" | awk 'NR == 2 { print $4 }')"
+disk="$(awk -v n="$need_kb" -v r="$raw_kb" -v u="$used_kb" -v c="$copy_kb" -v f="$free_kb" \
+  -v w="$copy_mode" 'BEGIN {
   printf "about %.1f GB needed (2.2 x %.1f GB raw data", n / 1e6, r / 1e6
   if (u > 0) printf " minus %.1f GB already written", u / 1e6
-  printf "), %.1f GB free", f / 1e6 }')"
+  if (c > 0) printf " plus %.1f GB of input files to copy", c / 1e6
+  printf "), %.1f GB free%s", f / 1e6, (w ? " in the work folder" : "") }')"
 if (( free_kb < need_kb )); then
   [[ "$skip_disk" == "1" ]] \
     || fail "not enough disk space: $disk; free space, or rerun with --skip-disk-check"
@@ -527,10 +590,25 @@ if (( free_kb < need_kb )); then
 else
   echo "disk space: $disk"
 fi
+# copies of the raw and FASTA files listed in mqpar.xml; a copy with the size of the original
+# counts as done, an interrupted one (.part) is replaced
+if (( copy_kb > 0 )); then
+  echo "copying $(awk -v c="$copy_kb" 'BEGIN { printf "%.1f", c / 1e6 }') GB of input files to the work folder ..."
+  start=$SECONDS
+  while IFS= read -r p; do
+    src="$PROJECT_DIR/${p#/work/}"
+    dst="$work/${p#/work/}"
+    if same_size "$src" "$dst"; then continue; fi
+    mkdir -p "$(dirname "$dst")"
+    cp "$src" "$dst.part" || fail "copying ${p#/work/} to the work folder failed"
+    mv "$dst.part" "$dst"
+  done <<< "$mq_paths"
+  echo "copied in $(( (SECONDS - start) / 60 )) min"
+fi
 
 # 4. this run's copy of mqpar.xml, and the parameter check (new runs only)
 sed "s|<numThreads>[0-9]*</numThreads>|<numThreads>$threads</numThreads>|" parameter/mqpar.xml \
-  > data/mqpar_run.xml
+  > "$work/data/mqpar_run.xml"
 echo "threads: $threads"
 if [[ -z "$resume" ]]; then
   echo "dry run ..."
@@ -538,7 +616,8 @@ if [[ -z "$resume" ]]; then
 fi
 n_jobs="$(awk -F'\t' 'NR > 1 && $1 ~ /^[0-9]+$/' "$RESULTS/dryrun.txt" | wc -l | tr -d ' ')"
 
-# 5. run info: written by a new run, extended by a continued one
+# 5. run info: written by a new run, extended by a continued one; with --workdir, the
+# checksums are those of the copies MaxQuant read
 if [[ -z "$resume" ]]; then
   {
     echo "project:       $PROJECT_NAME"
@@ -548,12 +627,17 @@ if [[ -z "$resume" ]]; then
     echo "maxquant:      $(mq --version 2>&1 | grep -m1 '^MaxQuantCmd')"
     echo "host:          $(uname -sm)"
     echo "threads:       $threads"
+    if (( copy_mode )); then echo "inputs:        copies in a work folder (--workdir)"; fi
     echo
     echo "sha256 of inputs:"
-    sha256 parameter/mqpar.xml parameter/design.txt data/*.raw
-    for db in data/*.fasta data/*.fa data/*.faa; do
-      if [[ -f "$db" ]]; then sha256 "$db"; fi
-    done
+    sha256 parameter/mqpar.xml parameter/design.txt
+    (
+      cd "$work"
+      sha256 data/*.raw
+      for db in data/*.fasta data/*.fa data/*.faa; do
+        if [[ -f "$db" ]]; then sha256 "$db"; fi
+      done
+    )
   } > "$RESULTS/run_info.txt" || true
 else
   {
@@ -580,16 +664,28 @@ else
     echo "MaxQuant continuing at job $resume of $n_jobs, log: results/maxquant_run.log"
   fi
   podman run --rm --name "$CONTAINER" --pull never --platform linux/amd64 --security-opt label=disable \
-    --ulimit nofile=-1:-1 -v "$PROJECT_DIR":/work "$IMAGE" \
+    --ulimit nofile=-1:-1 -v "$work":/work "$IMAGE" \
     "$MQPAR_RUN" --partial-processing="${resume:-1}" 2>&1 | tee -a "$LOG" \
-    || fail "MaxQuant stopped before the end, see results/maxquant_run.log; run this script again to continue"
+    || fail "MaxQuant stopped before the end, see results/maxquant_run.log; $continue_hint"
 fi
 
-# 7. collect output
-if [[ -d data/combined && ! -d results/combined ]]; then
-  mv data/combined results/combined
+# 7. collect output: combined/ to results/; with --workdir it is copied, then the work folder deleted
+if [[ -d "$work/data/combined" && ! -d results/combined ]]; then
+  if (( copy_mode )); then
+    echo "copying combined/ to results/ ..."
+    rm -rf results/combined.part
+    cp -R "$work/data/combined" results/combined.part \
+      || fail "copying combined/ to results/ failed; the work folder is kept, $continue_hint"
+    mv results/combined.part results/combined
+  else
+    mv data/combined results/combined
+  fi
 fi
 [[ -d results/combined/txt ]] || fail "no results/combined/txt, check results/maxquant_run.log"
+if (( copy_mode )); then
+  rm -rf "$work"
+  echo "work folder deleted"
+fi
 echo "done: results/combined/txt"
 ```
 
@@ -598,7 +694,7 @@ Notes on the template:
 - `set -euo pipefail` stops the script at the first error. A failing MaxQuant run inside the `tee` pipe ends with a message that running the script again continues the run.
 - The script is bash and also runs with macOS's bash 3.2. Run it as `./run_<project>.sh` or with `bash`, not by `source` in zsh.
 - MaxQuantCmd prints `--version` and `--help` to stderr, hence `2>&1` in the run info.
-- Messages name paths relative to the project folder, never complete host paths (section 10).
+- Messages name paths relative to the project folder, never complete host paths (section 10). The work folder of `--workdir` is named by its own name and the folder given on the command line. It never appears in `run_info.txt` or the log, which are kept in git.
 - Checksums use `sha256sum` (Linux) or `shasum` (macOS). Checksumming large raw files takes a few seconds per GB.
 - MaxQuant's `.index` files must be deleted on reruns with `--clean`, since a broken index from a failed run can be reused silently.
 - `--dryrun` creates an empty `data/combined/proc`. The `rmdir` line removes it, so a manual dry run, or a runner that stopped before MaxQuant wrote anything, does not count as an unfinished run.
@@ -724,7 +820,7 @@ For a new project, copy the three files and change `name:` in `environment.yml`.
 - Rootless podman (tested with 4.9.3). No .NET, Java or MaxQuant installation on the host.
 - Internet access: micromamba and conda-forge, `mcr.microsoft.com` for the .NET base image, and the data source (PRIDE).
 - `MaxQuant_v.2.9.0/`, copied by hand to the repository root (not in git, section 10).
-- Disk space in the project folder for the raw data plus 2.2 times its size.
+- Disk space for the raw data plus 2.2 times its size: in the project folder, or with `--workdir` in the work folder. The project folder then needs room for the raw data and `results/combined/`.
 
 ### Usage
 
@@ -734,6 +830,7 @@ bash projects/<project_name>/run_server.sh --dry-run          # checks only: no 
 bash projects/<project_name>/run_server.sh --download-only    # environment, image and data
 bash projects/<project_name>/run_server.sh                    # everything, then the MaxQuant run
 bash projects/<project_name>/run_server.sh --threads 32       # runner options are passed through
+bash projects/<project_name>/run_server.sh --workdir /tmp     # MaxQuant on the node's local disk (Batch jobs)
 ```
 
 Run `--dry-run` first, once on the login node and once inside a batch job: podman can behave differently on the two.
@@ -754,7 +851,15 @@ Every message has the form `[HH:MM:SS] step` or `[HH:MM:SS] ERROR: ...`, so a ha
 
 - MaxQuant uses CPUs only, no GPU.
 - Threads: the runner uses `SLURM_CPUS_PER_TASK` unless `--threads` is given. Memory: plan about 3 GB per thread (a run with 8 threads peaked at 20 GB).
-- Time limit: when a job is killed, submit the same batch script again. The runner continues at the interrupted job (section 5). `--clean` starts from job 1 instead.
+- Time limit: when a job is killed, submit the same batch script again. The runner continues at the interrupted job (section 5); with `--workdir`, only on the same node (see Storage). `--clean` starts from job 1 instead.
+- Storage: MaxQuant opens, writes and closes a great many files. On slow shared storage this can take far longer than the computing.
+  - Seen with Bergant_2023 on a `fuse.mergerfs` pool of hard disks: a step that took 7 minutes on a Mac ran for 19 hours, at 2% CPU use. A small file write took about 34 ms in the project folder and 0.05 ms on the node's local NVMe disk.
+  - Test it in a job, once in the project folder and once in `/tmp`: `time (for i in $(seq 200); do echo x >> .iotest; done); rm .iotest`. Local SSDs need well under 0.1 s; seconds mean slow storage.
+  - `df -hT /tmp` and `lsblk -d -o NAME,ROTA,SIZE` show what a node's `/tmp` is on (ROTA 0: SSD).
+  - On slow storage, run MaxQuant on the node's local disk with `--workdir`, for example `--workdir /tmp` (section 5). The runner copies the raw and FASTA files there (at 200 MB/s, 95 GB take about 8 minutes) and copies `combined/` back at the end. Ask for a time limit that fits the whole run.
+  - A killed run continues only on the same node. To resubmit on that node, add `#SBATCH --nodelist=<node>`; the runner's first message and its error message name the node.
+  - After an interrupted run, the work folder stays on its node and holds up to three times the raw data. If the run is not continued there, delete it, for example with `srun --nodelist=<node> rm -rf /tmp/maxquant_<uid>_<project_name>` (`id -u` prints the uid).
+  - If the cluster empties `/tmp` or `$TMPDIR` at the end of every job, a killed run always starts again.
 - A job killed while MaxQuant runs leaves podman's record of the container at "running", although its processes are gone. Podman 4.9 then refuses every command with `invalid internal status, try resetting the pause process with "podman system migrate"`, at least when the next job runs on the same node. `run_server.sh` detects this before the first other podman command and runs `podman system migrate`, which marks the container as stopped; the runner then removes it. Only containers whose processes are all gone are affected: a container that really runs keeps podman working, so the reset never stops a running MaxQuant.
 - If compute nodes have no internet, run `--download-only` on the login node first.
 - Podman stores images per user, in the folder that `podman info --format '{{.Store.GraphRoot}}'` prints. If it differs between the login node and the compute nodes, each node needs its own image, which `setup.sh` then builds there.
@@ -795,6 +900,8 @@ grep "^$USER:" /etc/subuid /etc/subgid
 | `a finished run exists in results/combined` from the runner | Results from an earlier run. Confirm with the user, then rerun with `--clean`. |
 | `data/combined holds an unfinished run, but ... differs from results/run_info.txt` | `mqpar.xml` or `design.txt` changed after the unfinished run started, so it cannot be continued. Confirm with the user, then rerun with `--clean`. |
 | `MaxQuant stopped before the end` | MaxQuant was stopped (`podman stop`, a SLURM time limit) or failed. After a stop, run the script again: it continues. After a failure, read the log and `data/combined/proc/<job>.error.txt` first; continuing repeats the failed job. |
+| `data/combined in the project folder holds an unfinished run` with `--workdir` | That run was started without `--workdir`. Continue it without `--workdir`, or confirm with the user and add `--clean` to start again in the work folder. |
+| A step runs for hours with little CPU use (a job's CPU efficiency of a few percent) | Slow storage under the project folder (section 8, batch jobs). Run with `--workdir` on a local disk. |
 | `container mq_<project_name> is running already` | Another run of this project is active, possibly from an earlier batch job. Check `podman ps --filter name=mq_<project_name>`; stop it with `podman stop mq_<project_name>` if it is not wanted. |
 | `not enough disk space` from the runner | Free space on the disk that holds the project, for example MaxQuant's working files in `data/` of finished projects (their results stay; a rerun with `--clean` recreates them). Ask the user before deleting anything. `--skip-disk-check` starts anyway. |
 | Deleting files frees less disk space than expected (Mac) | The Linux VM that runs the containers can keep files open that a container has used, even after they are deleted on the Mac (`lsof +L1 \| grep <project_name>` lists them). Restart the VM: `podman machine stop && podman machine start`. This can also hide the space freed by `--clean` from the runner's disk space check. |

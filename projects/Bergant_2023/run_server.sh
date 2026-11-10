@@ -4,7 +4,8 @@
 #   bash projects/<project>/run_server.sh [--dry-run | --download-only] [runner options]
 #     --dry-run         checks only: environment, image, podman; no download, no MaxQuant
 #     --download-only   everything except MaxQuant
-#     runner options    passed on to run_<project>.sh: --clean, --threads N, --skip-disk-check
+#     runner options    passed on to run_<project>.sh: --clean, --threads N, --skip-disk-check,
+#                       --workdir DIR (MaxQuant on copies in DIR, e.g. a compute node's local disk)
 # Rerunning is safe: every step skips what exists, and run_<project>.sh continues an unfinished
 # MaxQuant run (for example after a SLURM time limit) unless called with --clean.
 # Needs: bash, curl, podman (rootless), internet. MaxQuant runs in the podman image.
