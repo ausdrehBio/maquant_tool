@@ -11,10 +11,14 @@
 #   deposited: the authors' mqpar_IAV_FPMS.xml (MaxQuant 1.5.6.2) and
 #              Sample_descriptions_IAV_FPMS.txt in parameter/deposited/ (kept in git), and
 #              their result proteinGroups_IAV_FPMS.txt in data/deposited/ (for comparison)
+#   published: Supplementary Data 5 of the paper (Nat Commun 14:4906; filtered, imputed log2
+#              LFQ matrix with the paper's statistics), from Springer, saved in data/deposited/
+#              for the comparison in analysis_of_results/
 # Usage:  ./get_data_Bergant_2023.sh            download what is missing
 #         VERIFY=1 ./get_data_Bergant_2023.sh   also recheck checksums of files already present
-# Every file is checked against data_manifest.tsv (size and SHA-1 from PRIDE). The manifest is
-# created on the first run and kept in git, so later runs verify against the same record.
+# Every file is checked against data_manifest.tsv (size and SHA-1 from PRIDE; for Supplementary
+# Data 5, size and SHA-1 recorded at its first download). The manifest is created on the first
+# run and kept in git, so later runs verify against the same record.
 # Details: maxquant_intro.md, section 6
 set -euo pipefail
 
@@ -157,6 +161,13 @@ for f in json.load(open(path)):
                  f"PRIDE {accession}, {name}"))
 if wanted:
     sys.exit("ERROR: not in PRIDE: " + ", ".join(sorted(wanted)))
+# Supplementary Data 5 of the paper: not in PRIDE; size and SHA-1 recorded at its first download
+published = "data/deposited/Supplementary_Data_5_IAV_FPMS.xlsx"
+rows.append(((order["result"], published), "result", published, 6542561,
+             "sha1:2a87f988b84e80fe9f7ec175313db40b25900596",
+             "https://static-content.springer.com/esm/art%3A10.1038%2Fs41467-023-40469-6/"
+             "MediaObjects/41467_2023_40469_MOESM7_ESM.xlsx",
+             "Bergant et al. 2023, Nat Commun 14:4906, Supplementary Data 5"))
 print("kind\tlocal_path\tbytes\tchecksum\tsource\tnote")
 for row in sorted(rows):
     print("\t".join(str(c) for c in row[1:]))
