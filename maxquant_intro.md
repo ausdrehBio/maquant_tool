@@ -933,12 +933,14 @@ git grep -n -I -E "/Users/[A-Za-z]|/home/[a-z]" ; git ls-files -o --exclude-stan
 
 ```
 .DS_Store
+__pycache__/
 /MaxQuant_v.2.9.0/
 /projects/**/data/
 /projects/**/results/combined/
 /projects/**/results/nohup.out
 /projects/**/parameter/mqpar_default.xml
 /projects/**/analysis_of_results/figures/
+/projects/**/analysis_of_results/tables/
 /projects/**/analysis_of_results/msstats/FeatureLevelData.tsv
 /projects/*/*.pdf
 ```
