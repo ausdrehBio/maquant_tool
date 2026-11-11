@@ -104,6 +104,9 @@ while IFS= read -r p; do
   [[ "$p" == /work/* ]] || fail "mqpar.xml path is not a /work/... path: $p"
   [[ -f "$PROJECT_DIR/${p#/work/}" ]] || fail "mqpar.xml path does not exist in the project: $p"
 done <<< "$mq_paths"
+# the FASTA files of the search, relative to the project folder (data/ or elsewhere, for
+# example an own database in parameter/); their checksums go into results/run_info.txt
+fasta_files="$(sed -n 's|.*<fastaFilePath>/work/\(.*\)</fastaFilePath>.*|\1|p' "$MQPAR_HOST")"
 mqpar_threads="$(sed -n 's|.*<numThreads>\([0-9]*\)</numThreads>.*|\1|p' "$MQPAR_HOST")"
 [[ "$mqpar_threads" =~ ^[0-9]+$ ]] || fail "mqpar.xml needs exactly one <numThreads>"
 threads="${threads:-$mqpar_threads}"
@@ -126,11 +129,12 @@ elif [[ -d results/combined ]]; then
 elif (( copy_mode )) && [[ -d data/combined ]]; then
   fail "data/combined in the project folder holds an unfinished run; continue it without --workdir, or rerun with --clean to delete it"
 elif [[ -d "$work/data/combined" ]]; then
-  for f in parameter/mqpar.xml parameter/design.txt; do
+  while IFS= read -r f; do
+    [[ -n "$f" ]] || continue
     recorded="$(awk -v f="$f" '$2 == f { print $1 }' results/run_info.txt 2>/dev/null || true)"
     [[ -n "$recorded" && "$(sha256 "$f" | cut -d' ' -f1)" == "$recorded" ]] \
       || fail "data/combined holds an unfinished run, but $f differs from results/run_info.txt; rerun with --clean"
-  done
+  done <<< "$(printf '%s\n' parameter/mqpar.xml parameter/design.txt "$fasta_files")"
   [[ -f results/dryrun.txt ]] || fail "data/combined holds an unfinished run without results/dryrun.txt; rerun with --clean"
   last=""
   if [[ -f "$FINISHED" ]]; then
@@ -248,9 +252,9 @@ if [[ -z "$resume" ]]; then
     (
       cd "$work"
       sha256 data/*.raw
-      for db in data/*.fasta data/*.fa data/*.faa; do
-        if [[ -f "$db" ]]; then sha256 "$db"; fi
-      done
+      while IFS= read -r db; do
+        if [[ -n "$db" && -f "$db" ]]; then sha256 "$db"; fi
+      done <<< "$fasta_files"
     )
   } > "$RESULTS/run_info.txt" || true
 else

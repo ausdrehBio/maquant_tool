@@ -261,6 +261,17 @@ mq /work/parameter/mqpar.xml --dryrun
 
 `--dryrun` parses the file and prints the job list without processing. A malformed file fails here within seconds. The runner script repeats this check before every run, and before it checks that every raw and FASTA path in mqpar.xml exists.
 
+### Own FASTA files
+
+Sequences that no public database provides (variants, constructs, a project-specific protein list) go into an own FASTA file, which MaxQuant searches together with the others. Example: `projects/Bergant_2023_adapted/`.
+
+- Keep it in the project's `parameter/` folder, so it is in git: `data/` is not. List it in `mqpar.xml` as a further `<FastaFileInfo>` with the path `/work/parameter/<name>.fasta` and the parse rules of the other files, apart from the identifier rule where its headers need another one.
+- Header and identifier rule, one of two forms:
+  - UniProt form `>db|ID|ENTRY description`, for example `>sp|P42212|GFP_AEQVI Green fluorescent protein OS=Aequorea victoria OX=6100 GN=GFP`, with the default rule `>[^|]*\|(.*?)\|`: the text between the first two `|` is the ID.
+  - Any `>ID description`, for example `>PR8_3frame_uniq_000001 len=752`, with the rule `>([^\s]*)` in this file's `<FastaFileInfo>`: the first word is the ID. Without it, MaxQuant finds no ID in such headers.
+- IDs must be unique, in the file and across all FASTA files of the search, must not start with `CON__` or `REV__`, and must not contain `;` (MaxQuant's separator). The sequence lines contain only one-letter amino-acid codes; the line length does not matter.
+- The runner records the file's checksum in `results/run_info.txt` and refuses to continue an unfinished run after it changed.
+
 ---
 
 ## 4. design.txt
@@ -323,7 +334,7 @@ cat -t $P/parameter/design.txt
 1. Checks prerequisites: podman available, image present, `mqpar.xml` and `design.txt` present, every raw and FASTA path in `mqpar.xml` is a `/work/...` path to an existing file.
 2. Handles earlier results:
    - A finished run (`results/combined/`) is never overwritten without `--clean`.
-   - An unfinished run (`data/combined/` left by a failure, a stop or a SLURM time limit) is continued if `mqpar.xml` and `design.txt` have the checksums recorded in `results/run_info.txt`. If the parameters changed, it stops and asks for `--clean`. MaxQuant restarts with `--partial-processing` (job numbers from `results/dryrun.txt`):
+   - An unfinished run (`data/combined/` left by a failure, a stop or a SLURM time limit) is continued if `mqpar.xml`, `design.txt` and the FASTA files listed in `mqpar.xml` have the checksums recorded in `results/run_info.txt`. If one of them changed, it stops and asks for `--clean`. MaxQuant restarts with `--partial-processing` (job numbers from `results/dryrun.txt`):
      - after a stop, at the job after the last finished one (`data/combined/proc/#runningTimes.txt`);
      - after a failure, at the failed job, which `proc/` marks with `<job> <n>.error.txt`. MaxQuant lists a failed job in `#runningTimes.txt` like a finished one, so this check comes first. Proc file names differ from the job names (`MSMS_main_search` for "MS/MS main search"), so names are compared without spaces and punctuation.
 
@@ -331,7 +342,7 @@ cat -t $P/parameter/design.txt
    - `--clean` deletes `results/combined/` and MaxQuant's working files in `data/` (per-raw-file folders, `.index` files, the mqpar copies). It never touches raw or FASTA files.
 3. Checks free disk space: MaxQuant's working files and `combined/` need up to 2.2 times the size of the raw files, minus what a continued run has already written. With less free space it stops, unless called with `--skip-disk-check`. A run that fills the disk fails hours in. With `--workdir`, the check applies to the work folder and adds the input files still to be copied, which are then copied.
 4. Writes `data/mqpar_run.xml`, a copy of `mqpar.xml` with this run's thread count: `--threads N`, otherwise the CPUs of the SLURM job (`SLURM_CPUS_PER_TASK`), otherwise `numThreads` from `mqpar.xml`. The thread count changes only the speed, not the results. A new run then checks the parameters with `--dryrun`.
-5. Writes `results/run_info.txt`: date, image ID, MaxQuant version, threads, SHA-256 checksums of `mqpar.xml`, `design.txt`, raw files and FASTA files. The checksums prove which exact inputs produced the results. A continued run appends one line. With `--workdir`, the checksums are those of the copies MaxQuant read, and a line `inputs: copies in a work folder (--workdir)` says so.
+5. Writes `results/run_info.txt`: date, image ID, MaxQuant version, threads, SHA-256 checksums of `mqpar.xml`, `design.txt`, the raw files and the FASTA files listed in `mqpar.xml`, wherever they are in the project. The checksums prove which exact inputs produced the results. A continued run appends one line. With `--workdir`, the checksums are those of the copies MaxQuant read, and a line `inputs: copies in a work folder (--workdir)` says so.
 6. Runs MaxQuant in the container and writes the full log to `results/maxquant_run.log` (appended when continued).
 7. Moves `combined/` from `data/` to `results/` (MaxQuant 2.9.0 always writes it into `data/`). With `--workdir`, it copies `combined/` to `results/` and then deletes the work folder.
 
@@ -490,6 +501,9 @@ while IFS= read -r p; do
   [[ "$p" == /work/* ]] || fail "mqpar.xml path is not a /work/... path: $p"
   [[ -f "$PROJECT_DIR/${p#/work/}" ]] || fail "mqpar.xml path does not exist in the project: $p"
 done <<< "$mq_paths"
+# the FASTA files of the search, relative to the project folder (data/ or elsewhere, for
+# example an own database in parameter/); their checksums go into results/run_info.txt
+fasta_files="$(sed -n 's|.*<fastaFilePath>/work/\(.*\)</fastaFilePath>.*|\1|p' "$MQPAR_HOST")"
 mqpar_threads="$(sed -n 's|.*<numThreads>\([0-9]*\)</numThreads>.*|\1|p' "$MQPAR_HOST")"
 [[ "$mqpar_threads" =~ ^[0-9]+$ ]] || fail "mqpar.xml needs exactly one <numThreads>"
 threads="${threads:-$mqpar_threads}"
@@ -512,11 +526,12 @@ elif [[ -d results/combined ]]; then
 elif (( copy_mode )) && [[ -d data/combined ]]; then
   fail "data/combined in the project folder holds an unfinished run; continue it without --workdir, or rerun with --clean to delete it"
 elif [[ -d "$work/data/combined" ]]; then
-  for f in parameter/mqpar.xml parameter/design.txt; do
+  while IFS= read -r f; do
+    [[ -n "$f" ]] || continue
     recorded="$(awk -v f="$f" '$2 == f { print $1 }' results/run_info.txt 2>/dev/null || true)"
     [[ -n "$recorded" && "$(sha256 "$f" | cut -d' ' -f1)" == "$recorded" ]] \
       || fail "data/combined holds an unfinished run, but $f differs from results/run_info.txt; rerun with --clean"
-  done
+  done <<< "$(printf '%s\n' parameter/mqpar.xml parameter/design.txt "$fasta_files")"
   [[ -f results/dryrun.txt ]] || fail "data/combined holds an unfinished run without results/dryrun.txt; rerun with --clean"
   last=""
   if [[ -f "$FINISHED" ]]; then
@@ -634,9 +649,9 @@ if [[ -z "$resume" ]]; then
     (
       cd "$work"
       sha256 data/*.raw
-      for db in data/*.fasta data/*.fa data/*.faa; do
-        if [[ -f "$db" ]]; then sha256 "$db"; fi
-      done
+      while IFS= read -r db; do
+        if [[ -n "$db" && -f "$db" ]]; then sha256 "$db"; fi
+      done <<< "$fasta_files"
     )
   } > "$RESULTS/run_info.txt" || true
 else
@@ -898,7 +913,7 @@ grep "^$USER:" /etc/subuid /etc/subgid
 | `... does not exist` for a path | Host path instead of `/work/...`, or the file is outside the mounted project folder. |
 | `no .raw files in data/` from the runner, although raw files are there | Upper-case extension `.RAW`, as in many PRIDE datasets. The runner's `data/*.raw` pattern is case-sensitive. Save or rename the files as `.raw`. |
 | `a finished run exists in results/combined` from the runner | Results from an earlier run. Confirm with the user, then rerun with `--clean`. |
-| `data/combined holds an unfinished run, but ... differs from results/run_info.txt` | `mqpar.xml` or `design.txt` changed after the unfinished run started, so it cannot be continued. Confirm with the user, then rerun with `--clean`. |
+| `data/combined holds an unfinished run, but ... differs from results/run_info.txt` | `mqpar.xml`, `design.txt` or a FASTA file changed after the unfinished run started, so it cannot be continued. Confirm with the user, then rerun with `--clean`. |
 | `MaxQuant stopped before the end` | MaxQuant was stopped (`podman stop`, a SLURM time limit) or failed. After a stop, run the script again: it continues. After a failure, read the log and `data/combined/proc/<job>.error.txt` first; continuing repeats the failed job. |
 | `data/combined in the project folder holds an unfinished run` with `--workdir` | That run was started without `--workdir`. Continue it without `--workdir`, or confirm with the user and add `--clean` to start again in the work folder. |
 | A step runs for hours with little CPU use (a job's CPU efficiency of a few percent) | Slow storage under the project folder (section 8, batch jobs). Run with `--workdir` on a local disk. |
