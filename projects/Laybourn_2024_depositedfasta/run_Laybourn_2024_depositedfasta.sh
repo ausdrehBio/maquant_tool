@@ -21,14 +21,18 @@ MQPAR_HOST="$PROJECT_DIR/parameter/mqpar.xml"
 MQPAR_RUN="/work/data/mqpar_run.xml"            # mqpar.xml with this run's thread count
 RESULTS="$PROJECT_DIR/results"
 LOG="$RESULTS/maxquant_run.log"
+OMP="OMP_THREAD_LIMIT=1"                        # OpenMP threads per MaxQuant process, see mq()
 
 cd "$PROJECT_DIR"
 fail() { echo "ERROR: $*" >&2; exit 1; }
 # $work is the folder mounted as /work: the project folder, or its copy with --workdir.
 # --ulimit nofile=-1:-1: open-files limit as high as this process may set it; a fixed
 # default_ulimits in a server's containers.conf can exceed that, and the container fails to start
+# -e "$OMP": MaxQuant runs up to --threads processes at a time; without the limit, the OpenMP
+# library in each (libgomp, used by XGBoost in MaxDIA) can start one thread per CPU of the host,
+# more than a large server allows a container ("libgomp: Thread creation failed")
 mq() { podman run --rm --pull never --platform linux/amd64 --security-opt label=disable \
-         --ulimit nofile=-1:-1 -v "$work":/work "$IMAGE" "$@"; }
+         --ulimit nofile=-1:-1 -e "$OMP" -v "$work":/work "$IMAGE" "$@"; }
 sha256() { if command -v sha256sum > /dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 # true if file $2 exists and has the size of file $1
 same_size() { [[ -f "$2" && "$(wc -c < "$1" | tr -d ' ')" == "$(wc -c < "$2" | tr -d ' ')" ]]; }
@@ -256,6 +260,7 @@ if [[ -z "$resume" ]]; then
     echo "maxquant:      $(mq --version 2>&1 | grep -m1 '^MaxQuantCmd')"
     echo "host:          $(uname -sm)"
     echo "threads:       $threads"
+    echo "openmp:        $OMP"
     if (( copy_mode )); then echo "inputs:        copies in a work folder (--workdir)"; fi
     echo
     echo "sha256 of inputs:"
@@ -272,7 +277,7 @@ else
   {
     echo
     echo "continued (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ) at job $resume of $n_jobs," \
-      "threads $threads, host $(uname -sm), image id $(podman image inspect --format '{{.Id}}' "$IMAGE")"
+      "threads $threads, $OMP, host $(uname -sm), image id $(podman image inspect --format '{{.Id}}' "$IMAGE")"
   } >> "$RESULTS/run_info.txt" || true
 fi
 
@@ -293,7 +298,7 @@ else
     echo "MaxQuant continuing at job $resume of $n_jobs, log: results/maxquant_run.log"
   fi
   podman run --rm --name "$CONTAINER" --pull never --platform linux/amd64 --security-opt label=disable \
-    --ulimit nofile=-1:-1 -v "$work":/work "$IMAGE" \
+    --ulimit nofile=-1:-1 -e "$OMP" -v "$work":/work "$IMAGE" \
     "$MQPAR_RUN" --partial-processing="${resume:-1}" 2>&1 | tee -a "$LOG" \
     || fail "MaxQuant stopped before the end, see results/maxquant_run.log; $continue_hint"
 fi

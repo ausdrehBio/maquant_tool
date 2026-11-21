@@ -303,7 +303,7 @@ Example: `projects/Laybourn_2024/` (Orbitrap Exploris 480, FAIMS at one compensa
 - Library files must lie in the project folder, like everything MaxQuant reads. The runner treats them like FASTA files: it checks that they exist, records their SHA-256 in `run_info.txt`, compares them before continuing a run, and copies them with `--workdir`.
 - DIA parameters with their own tags: `<maxMissedCleavagesDia>` (default 1; the missed cleavages of the library, which `<maxMissedCleavages>` does not set), `<diaMaxModifications>` (default 2 variable modifications per library peptide), `<diaMinCharge>` and `<diaMaxCharge>` (1 and 4), `<lfqMinRatioCountDia>` (2). Match between runs does not apply.
 - A predicted library adds five jobs ("DIA library preparation" to "Sort library 0"): 50 jobs instead of 45.
-- Status: parameter files and dry runs are tested, full runs not yet. The predicted library needs `libgomp1` in the image (section 1): without it, the first server run of Laybourn_2024_pools stopped at "DIA library preparation". On the Mac, the x64 emulation (qemu in the podman machine) cannot read the Laybourn_2024 raw files: MaxQuant stops at once with `AccessViolationException` in `ThermoFisher.CommonCore.RawFileReader ... ScanEvent.CompareTo`, with one thread as well, and leaves a `qemu_dotnet_*.core` file of several hundred MB in the project folder. The Q Exactive DDA files of Bergant_2023 are read there without problems. Run such data on a Linux x86_64 server; `--create` and `--dryrun` work on the Mac.
+- Status: parameter files and dry runs are tested, full runs not yet. The predicted library needs `libgomp1` in the image (section 1): without it, the first server run of Laybourn_2024_pools stopped at "DIA library preparation". The runner limits OpenMP to one thread per MaxQuant process (section 5, notes on the template); without the limit, the next attempt stopped at "Library prediction 0". On the Mac, the x64 emulation (qemu in the podman machine) cannot read the Laybourn_2024 raw files: MaxQuant stops at once with `AccessViolationException` in `ThermoFisher.CommonCore.RawFileReader ... ScanEvent.CompareTo`, with one thread as well, and leaves a `qemu_dotnet_*.core` file of several hundred MB in the project folder. The Q Exactive DDA files of Bergant_2023 are read there without problems. Run such data on a Linux x86_64 server; `--create` and `--dryrun` work on the Mac.
 - `--create` in the DIA modes failed now and then on the Mac with `Error creating mqpar.xml: Exception has been thrown by the target of an invocation` and a truncated file; the same call then worked. `make_parameters_Laybourn_2024.sh` repeats it up to 3 times.
 
 ---
@@ -452,14 +452,18 @@ MQPAR_HOST="$PROJECT_DIR/parameter/mqpar.xml"
 MQPAR_RUN="/work/data/mqpar_run.xml"            # mqpar.xml with this run's thread count
 RESULTS="$PROJECT_DIR/results"
 LOG="$RESULTS/maxquant_run.log"
+OMP="OMP_THREAD_LIMIT=1"                        # OpenMP threads per MaxQuant process, see mq()
 
 cd "$PROJECT_DIR"
 fail() { echo "ERROR: $*" >&2; exit 1; }
 # $work is the folder mounted as /work: the project folder, or its copy with --workdir.
 # --ulimit nofile=-1:-1: open-files limit as high as this process may set it; a fixed
 # default_ulimits in a server's containers.conf can exceed that, and the container fails to start
+# -e "$OMP": MaxQuant runs up to --threads processes at a time; without the limit, the OpenMP
+# library in each (libgomp, used by XGBoost in MaxDIA) can start one thread per CPU of the host,
+# more than a large server allows a container ("libgomp: Thread creation failed")
 mq() { podman run --rm --pull never --platform linux/amd64 --security-opt label=disable \
-         --ulimit nofile=-1:-1 -v "$work":/work "$IMAGE" "$@"; }
+         --ulimit nofile=-1:-1 -e "$OMP" -v "$work":/work "$IMAGE" "$@"; }
 sha256() { if command -v sha256sum > /dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 # true if file $2 exists and has the size of file $1
 same_size() { [[ -f "$2" && "$(wc -c < "$1" | tr -d ' ')" == "$(wc -c < "$2" | tr -d ' ')" ]]; }
@@ -687,6 +691,7 @@ if [[ -z "$resume" ]]; then
     echo "maxquant:      $(mq --version 2>&1 | grep -m1 '^MaxQuantCmd')"
     echo "host:          $(uname -sm)"
     echo "threads:       $threads"
+    echo "openmp:        $OMP"
     if (( copy_mode )); then echo "inputs:        copies in a work folder (--workdir)"; fi
     echo
     echo "sha256 of inputs:"
@@ -703,7 +708,7 @@ else
   {
     echo
     echo "continued (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ) at job $resume of $n_jobs," \
-      "threads $threads, host $(uname -sm), image id $(podman image inspect --format '{{.Id}}' "$IMAGE")"
+      "threads $threads, $OMP, host $(uname -sm), image id $(podman image inspect --format '{{.Id}}' "$IMAGE")"
   } >> "$RESULTS/run_info.txt" || true
 fi
 
@@ -724,7 +729,7 @@ else
     echo "MaxQuant continuing at job $resume of $n_jobs, log: results/maxquant_run.log"
   fi
   podman run --rm --name "$CONTAINER" --pull never --platform linux/amd64 --security-opt label=disable \
-    --ulimit nofile=-1:-1 -v "$work":/work "$IMAGE" \
+    --ulimit nofile=-1:-1 -e "$OMP" -v "$work":/work "$IMAGE" \
     "$MQPAR_RUN" --partial-processing="${resume:-1}" 2>&1 | tee -a "$LOG" \
     || fail "MaxQuant stopped before the end, see results/maxquant_run.log; $continue_hint"
 fi
@@ -752,6 +757,7 @@ echo "done: results/combined/txt"
 Notes on the template:
 
 - DIA library files listed in mqpar.xml (`<diaLibraryPaths>`, `<diaEvidencePaths>`, `<diaMsmsPaths>`) are handled like FASTA files (section 3, "DIA (MaxDIA)"). The runners of projects created before Laybourn_2024 lack this; for searches without library files they do the same.
+- `OMP_THREAD_LIMIT=1` in the container: MaxQuant parallelises by running up to `--threads` task processes at a time. In MaxDIA, each process also calls XGBoost, whose OpenMP library (libgomp) otherwise starts up to one thread per CPU of the host. On a large server, 16 such processes exceeded the threads allowed (`libgomp: Thread creation failed: Resource temporarily unavailable`, section 9). With the limit, `--threads` is the number of CPUs the run uses. The runners of projects created before Laybourn_2024 lack the limit; their DDA searches do not load libgomp.
 
 - `set -euo pipefail` stops the script at the first error. A failing MaxQuant run inside the `tee` pipe ends with a message that running the script again continues the run.
 - The script is bash and also runs with macOS's bash 3.2. Run it as `./run_<project>.sh` or with `bash`, not by `source` in zsh.
@@ -968,6 +974,7 @@ grep "^$USER:" /etc/subuid /etc/subgid
 | `not enough disk space` from the runner | Free space on the disk that holds the project, for example MaxQuant's working files in `data/` of finished projects (their results stay; a rerun with `--clean` recreates them). Ask the user before deleting anything. `--skip-disk-check` starts anyway. |
 | Deleting files frees less disk space than expected (Mac) | The Linux VM that runs the containers can keep files open that a container has used, even after they are deleted on the Mac (`lsof +L1 \| grep <project_name>` lists them). Restart the VM: `podman machine stop && podman machine start`. This can also hide the space freed by `--clean` from the runner's disk space check. |
 | `Unable to load shared library 'xgboost' or one of its dependencies` ... `libgomp.so.1: cannot open shared object file` (job "DIA library preparation") | The image lacks `libgomp1`, which MaxQuant's `libxgboost.so` needs (section 1). Pull the current `Dockerfile` and rerun `run_server.sh`: `setup.sh` rebuilds the image, and the runner continues the run and repeats the failed job. On the Mac, rebuild by hand (section 1). |
+| `libgomp: Thread creation failed: Resource temporarily unavailable` (job "Library prediction 0" of MaxDIA) | Too many threads: each of the parallel MaxQuant processes started one OpenMP thread per CPU of the host. The runner sets `OMP_THREAD_LIMIT=1` in the container (section 5, notes on the template); runners without it need the line. Continue the run, or rerun with `--clean`. |
 | `libraries missing in localhost/maxquant:2.9.0` from `setup.sh` | A native library in `MaxQuant_v.2.9.0/bin/` needs a library the image lacks. Add the Debian package that provides it to the `apt-get install` line of the `Dockerfile`; `setup.sh` then rebuilds the image. |
 | `the MaxQuant image does not start` from `run_server.sh` | The lines after the message are podman's output. A broken build: `podman rmi localhost/maxquant:2.9.0`, then `setup.sh` builds it again. |
 | `files written in the container do not belong to you` | Podman does not run rootless, or the user has no entries in `/etc/subuid` and `/etc/subgid` (section 8). |
