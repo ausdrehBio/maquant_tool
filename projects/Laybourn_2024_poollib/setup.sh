@@ -4,7 +4,9 @@
 #      (to ~/.local/bin/micromamba; environments under $MAMBA_ROOT_PREFIX, default ~/micromamba)
 #   2. the conda environment from environment.yml, recreated when environment.yml changed
 #   3. the MaxQuant image localhost/maxquant:2.9.0 in podman, built from the repository's
-#      Dockerfile and MaxQuant_v.2.9.0/ (the unzipped release, copied to the repository root by hand)
+#      Dockerfile and MaxQuant_v.2.9.0/ (the unzipped release, copied to the repository root by hand),
+#      rebuilt when Dockerfile or .dockerignore changed; then a check that MaxQuant's native
+#      libraries find every library they need in the image
 # Usage:  bash projects/<project>/setup.sh   (run_server.sh calls it)
 # Details: maxquant_intro.md, section 8
 set -euo pipefail
@@ -86,16 +88,42 @@ else
   log "conda environment $env_name created"
 fi
 
-# 3. MaxQuant image
+# 3. MaxQuant image; a checksum of Dockerfile and .dockerignore in an image label marks it as current
 command -v podman > /dev/null || die "podman not found; it must be installed (rootless), see maxquant_intro.md section 8"
+build_sum="$(cat "$REPO_DIR/Dockerfile" "$REPO_DIR/.dockerignore" | cksum | cut -d' ' -f1)"
+image_sum=""
 if podman image exists "$IMAGE"; then
+  image_sum="$(podman image inspect --format '{{ index .Labels "maxquant_tool.build_cksum" }}' "$IMAGE")" \
+    || die "podman image inspect $IMAGE failed"
+fi
+if [[ "$image_sum" == "$build_sum" ]]; then
   log "MaxQuant image $IMAGE present"
 else
   [[ -f "$REPO_DIR/MaxQuant_v.2.9.0/bin/MaxQuantCmd.dll" ]] \
     || die "MaxQuant_v.2.9.0/ missing at the repository root: copy the unzipped MaxQuant 2.9.0 release there"
-  log "building the MaxQuant image $IMAGE (pulls the .NET 8 base image)"
-  podman build --platform linux/amd64 -t "$IMAGE" -f "$REPO_DIR/Dockerfile" "$REPO_DIR" \
+  if podman image exists "$IMAGE"; then
+    log "Dockerfile or .dockerignore changed since the MaxQuant image was built: rebuilding $IMAGE"
+  else
+    log "building the MaxQuant image $IMAGE (pulls the .NET 8 base image)"
+  fi
+  podman build --platform linux/amd64 --label "maxquant_tool.build_cksum=$build_sum" \
+    -t "$IMAGE" -f "$REPO_DIR/Dockerfile" "$REPO_DIR" \
     || die "building the MaxQuant image failed"
   log "MaxQuant image $IMAGE built"
 fi
+
+# 4. MaxQuant's native libraries (*.so in bin/) need libraries of the image, for example
+# libxgboost.so (MaxDIA library prediction) needs libgomp.so.1. A missing one only shows when a
+# job loads the library, possibly hours into a run. ldd lists it as "<library> => not found".
+# --ulimit nofile=-1:-1 as in run_<project>.sh
+out="$(podman run --rm --pull never --platform linux/amd64 --ulimit nofile=-1:-1 \
+  --entrypoint sh "$IMAGE" -c \
+  'for f in /opt/maxquant/bin/*.so; do
+     ldd "$f" | sed -n "s|^[[:space:]]*\([^ ]*\) => not found.*|MISSING: ${f##*/} needs \1|p"
+   done' 2>&1)" \
+  || die "checking the native libraries in $IMAGE failed; podman's output:"$'\n'"$(printf '%s\n' "$out" | tail -20)"
+missing="$(printf '%s\n' "$out" | sed -n 's/^MISSING: //p')"
+[[ -z "$missing" ]] \
+  || die "libraries missing in $IMAGE (add their packages to the Dockerfile):"$'\n'"$missing"
+log "MaxQuant's native libraries find their dependencies"
 log "setup done"

@@ -72,18 +72,25 @@ podman image exists localhost/maxquant:2.9.0 && echo "image present"
 
 Podman stores locally built images under the `localhost/` prefix. Scripts use the full name together with `--pull never`, so podman never looks for the image in a registry.
 
-### Rebuild only if it is missing
+### Rebuild only if it is missing or out of date
 
-Requires the unzipped release in `MaxQuant_v.2.9.0/` at the repository root. On a server, `setup.sh` builds the image (section 8). If `Dockerfile` or `.dockerignore` are missing at the root, create them with this content.
+Requires the unzipped release in `MaxQuant_v.2.9.0/` at the repository root. On a server, `setup.sh` builds the image, and rebuilds it when `Dockerfile` or `.dockerignore` changed (section 8). If `Dockerfile` or `.dockerignore` are missing at the root, create them with this content.
 
 `Dockerfile`:
 
 ```dockerfile
 FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/runtime:8.0
+# libgomp1 (OpenMP): needed by MaxQuant's libxgboost.so (MaxDIA library prediction) and
+# libbaf2sql_c.so (Bruker raw files); the .NET base image lacks it
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 COPY MaxQuant_v.2.9.0 /opt/maxquant
 WORKDIR /work
 ENTRYPOINT ["dotnet", "/opt/maxquant/bin/MaxQuantCmd.dll"]
 ```
+
+Images built before `libgomp1` was added run DDA searches of Thermo data normally, but MaxDIA with a predicted library fails at the job "DIA library preparation" (section 9). Rebuild them.
 
 `.dockerignore` (keeps raw data out of the build; podman reads it like Docker):
 
@@ -97,7 +104,14 @@ podman build --platform linux/amd64 -t localhost/maxquant:2.9.0 .
 podman run --rm --pull never --platform linux/amd64 --ulimit nofile=-1:-1 localhost/maxquant:2.9.0 --version   # expect: MaxQuantCmd 2.9.0.0 (on stderr)
 ```
 
-The build pulls the .NET 8 base image from `mcr.microsoft.com` once, so it needs internet access.
+The build pulls the .NET 8 base image from `mcr.microsoft.com` once and installs `libgomp1` from the Debian mirrors, so it needs internet access. `setup.sh` also adds the label `maxquant_tool.build_cksum` (a checksum of `Dockerfile` and `.dockerignore`), which tells it whether the image is current. An image built by hand without the label is rebuilt by `setup.sh` once.
+
+Check that MaxQuant's native libraries find every library they need (`setup.sh` does the same and stops if one is missing). The command must print nothing:
+
+```bash
+podman run --rm --pull never --platform linux/amd64 --ulimit nofile=-1:-1 --entrypoint sh localhost/maxquant:2.9.0 \
+  -c 'ldd /opt/maxquant/bin/*.so | grep "not found"'
+```
 
 ---
 
@@ -289,7 +303,7 @@ Example: `projects/Laybourn_2024/` (Orbitrap Exploris 480, FAIMS at one compensa
 - Library files must lie in the project folder, like everything MaxQuant reads. The runner treats them like FASTA files: it checks that they exist, records their SHA-256 in `run_info.txt`, compares them before continuing a run, and copies them with `--workdir`.
 - DIA parameters with their own tags: `<maxMissedCleavagesDia>` (default 1; the missed cleavages of the library, which `<maxMissedCleavages>` does not set), `<diaMaxModifications>` (default 2 variable modifications per library peptide), `<diaMinCharge>` and `<diaMaxCharge>` (1 and 4), `<lfqMinRatioCountDia>` (2). Match between runs does not apply.
 - A predicted library adds five jobs ("DIA library preparation" to "Sort library 0"): 50 jobs instead of 45.
-- Status: parameter files and dry runs are tested, full runs not yet. On the Mac, the x64 emulation (qemu in the podman machine) cannot read the Laybourn_2024 raw files: MaxQuant stops at once with `AccessViolationException` in `ThermoFisher.CommonCore.RawFileReader ... ScanEvent.CompareTo`, with one thread as well, and leaves a `qemu_dotnet_*.core` file of several hundred MB in the project folder. The Q Exactive DDA files of Bergant_2023 are read there without problems. Run such data on a Linux x86_64 server; `--create` and `--dryrun` work on the Mac.
+- Status: parameter files and dry runs are tested, full runs not yet. The predicted library needs `libgomp1` in the image (section 1): without it, the first server run of Laybourn_2024_pools stopped at "DIA library preparation". On the Mac, the x64 emulation (qemu in the podman machine) cannot read the Laybourn_2024 raw files: MaxQuant stops at once with `AccessViolationException` in `ThermoFisher.CommonCore.RawFileReader ... ScanEvent.CompareTo`, with one thread as well, and leaves a `qemu_dotnet_*.core` file of several hundred MB in the project folder. The Q Exactive DDA files of Bergant_2023 are read there without problems. Run such data on a Linux x86_64 server; `--create` and `--dryrun` work on the Mac.
 - `--create` in the DIA modes failed now and then on the Mac with `Error creating mqpar.xml: Exception has been thrown by the target of an invocation` and a truncated file; the same call then worked. `make_parameters_Laybourn_2024.sh` repeats it up to 3 times.
 
 ---
@@ -857,7 +871,7 @@ Three files in the project folder. Example: `projects/Bergant_2023/`.
 | File | Content |
 |---|---|
 | `run_server.sh` | the entry point. Generic: it takes the project name from its folder. |
-| `setup.sh` | installs micromamba if neither micromamba nor conda exists (to `~/.local/bin`, environments under `$MAMBA_ROOT_PREFIX`, default `~/micromamba`); creates the conda environment from `environment.yml` and recreates it when the file changed; builds the image if it is missing |
+| `setup.sh` | installs micromamba if neither micromamba nor conda exists (to `~/.local/bin`, environments under `$MAMBA_ROOT_PREFIX`, default `~/micromamba`); creates the conda environment from `environment.yml` and recreates it when the file changed; builds the image if it is missing, and rebuilds it when `Dockerfile` or `.dockerignore` changed (section 1); checks that MaxQuant's native libraries find their dependencies in the image |
 | `environment.yml` | host tools for the download and the checksums: python, curl, perl (`shasum`). MaxQuant needs nothing from it. `name:` must differ between projects, for example `maxquant_<project_name>`. |
 
 For a new project, copy the three files and change `name:` in `environment.yml`. The project also needs `get_data_<project_name>.sh`, `run_<project_name>.sh`, `parameter/mqpar.xml` and `parameter/design.txt`.
@@ -866,7 +880,7 @@ For a new project, copy the three files and change `name:` in `environment.yml`.
 
 - Linux x86_64 with bash, curl, tar and bzip2 (the last three for installing micromamba).
 - Rootless podman (tested with 4.9.3). No .NET, Java or MaxQuant installation on the host.
-- Internet access: micromamba and conda-forge, `mcr.microsoft.com` for the .NET base image, and the data source (PRIDE).
+- Internet access: micromamba and conda-forge, `mcr.microsoft.com` for the .NET base image, the Debian mirrors for `libgomp1`, and the data source (PRIDE).
 - `MaxQuant_v.2.9.0/`, copied by hand to the repository root (not in git, section 10).
 - Disk space for the raw data plus 2.2 times its size: in the project folder, or with `--workdir` in the work folder. The project folder then needs room for the raw data and `results/combined/`.
 
@@ -953,6 +967,8 @@ grep "^$USER:" /etc/subuid /etc/subgid
 | `container mq_<project_name> is running already` | Another run of this project is active, possibly from an earlier batch job. Check `podman ps --filter name=mq_<project_name>`; stop it with `podman stop mq_<project_name>` if it is not wanted. |
 | `not enough disk space` from the runner | Free space on the disk that holds the project, for example MaxQuant's working files in `data/` of finished projects (their results stay; a rerun with `--clean` recreates them). Ask the user before deleting anything. `--skip-disk-check` starts anyway. |
 | Deleting files frees less disk space than expected (Mac) | The Linux VM that runs the containers can keep files open that a container has used, even after they are deleted on the Mac (`lsof +L1 \| grep <project_name>` lists them). Restart the VM: `podman machine stop && podman machine start`. This can also hide the space freed by `--clean` from the runner's disk space check. |
+| `Unable to load shared library 'xgboost' or one of its dependencies` ... `libgomp.so.1: cannot open shared object file` (job "DIA library preparation") | The image lacks `libgomp1`, which MaxQuant's `libxgboost.so` needs (section 1). Pull the current `Dockerfile` and rerun `run_server.sh`: `setup.sh` rebuilds the image, and the runner continues the run and repeats the failed job. On the Mac, rebuild by hand (section 1). |
+| `libraries missing in localhost/maxquant:2.9.0` from `setup.sh` | A native library in `MaxQuant_v.2.9.0/bin/` needs a library the image lacks. Add the Debian package that provides it to the `apt-get install` line of the `Dockerfile`; `setup.sh` then rebuilds the image. |
 | `the MaxQuant image does not start` from `run_server.sh` | The lines after the message are podman's output. A broken build: `podman rmi localhost/maxquant:2.9.0`, then `setup.sh` builds it again. |
 | `files written in the container do not belong to you` | Podman does not run rootless, or the user has no entries in `/etc/subuid` and `/etc/subgid` (section 8). |
 | `podman cannot write to the mounted project folder` | Missing write permission on the project folder, or a security module other than SELinux blocks the mount. Run the failing `podman run` command by hand to see the error. |
