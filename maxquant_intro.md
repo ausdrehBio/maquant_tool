@@ -181,7 +181,7 @@ mq --create \
 | `--useMBR` | match between runs | |
 | `--numThreads` | CPU threads, at or below `podman info --format '{{.Host.CPUs}}'`; the runner script can override it per run (`--threads`) | |
 
-Only standard DDA on Thermo Orbitrap data has been tested with this image.
+Full runs have been tested with this image for standard DDA on Thermo Orbitrap data. For DIA, see "DIA (MaxDIA)" below.
 
 `--create` takes the raw files from `--pathRawFileFolder`, not from `design.txt`: a raw file missing from `design.txt` gets an empty experiment name without a warning, and a `design.txt` row without a raw file is dropped. `--create` and `--dryrun` do not open raw files (the FASTA files must exist), so parameters can be prepared against empty placeholder files named after `design.txt` before a download has finished. Example: `projects/Bergant_2023/make_parameters_Bergant_2023.sh`.
 
@@ -259,7 +259,7 @@ grep -n -A3 -E "<maxQuantVersion>|<fastaFilePath>|<filePaths>|<experiments>" $P/
 mq /work/parameter/mqpar.xml --dryrun
 ```
 
-`--dryrun` parses the file and prints the job list without processing. A malformed file fails here within seconds. The runner script repeats this check before every run, and before it checks that every raw and FASTA path in mqpar.xml exists.
+`--dryrun` parses the file and prints the job list without processing. A malformed file fails here within seconds. The runner script repeats this check before every run, and before it checks that every raw, FASTA and DIA library path in mqpar.xml exists.
 
 ### Own FASTA files
 
@@ -271,6 +271,26 @@ Sequences that no public database provides (variants, constructs, a project-spec
   - Any `>ID description`, for example `>PR8_3frame_uniq_000001 len=752`, with the rule `>([^\s]*)` in this file's `<FastaFileInfo>`: the first word is the ID. Without it, MaxQuant finds no ID in such headers.
 - IDs must be unique, in the file and across all FASTA files of the search, must not start with `CON__` or `REV__`, and must not contain `;` (MaxQuant's separator). The sequence lines contain only one-letter amino-acid codes; the line length does not matter.
 - The runner records the file's checksum in `results/run_info.txt` and refuses to continue an unfinished run after it changed.
+
+### DIA (MaxDIA)
+
+Example: `projects/Laybourn_2024/` (Orbitrap Exploris 480, FAIMS at one compensation voltage) and its variants `Laybourn_2024_depositedfasta`, `_pools` and `_poollib`.
+
+- Run type `--LCMSType DIA`. `FDIA` (FAIMS-MaxDIA) has no label-free quantification in 2.9.0: with `--useLFQ` the dry run stops with `We do not support FAIMS DIA LFQ`. Data with a single FAIMS compensation voltage need no FAIMS run type, since MaxQuant sets FAIMS only for more than one CV (changelog 2.8.1).
+- The spectral library is set by `--libraryType` in `--create`, which writes `<diaLibraryType>` in mqpar.xml:
+
+| `--libraryType` | `<diaLibraryType>` | Library | Files in mqpar.xml |
+|---|---|---|---|
+| `OTF` (default) | 0 | predicted on the fly from the FASTA files | none |
+| `DDA` | 2 | results of a MaxQuant search, DDA or DIA ("Library generation from DIA samples", changelog 2.3.0.0) | `evidence.txt` in `<diaEvidencePaths>`, `msms.txt` in `<diaMsmsPaths>` |
+| `PR`, `TSV` | not used here | a predicted `library.txt` of an earlier run; a tab-separated library | `<diaLibraryPaths>` |
+
+- `--create --pathLibrary evidence.txt msms.txt` writes both files into both lists. Write one file per list instead (example: `make_parameters_Laybourn_2024_poollib.py`).
+- Library files must lie in the project folder, like everything MaxQuant reads. The runner treats them like FASTA files: it checks that they exist, records their SHA-256 in `run_info.txt`, compares them before continuing a run, and copies them with `--workdir`.
+- DIA parameters with their own tags: `<maxMissedCleavagesDia>` (default 1; the missed cleavages of the library, which `<maxMissedCleavages>` does not set), `<diaMaxModifications>` (default 2 variable modifications per library peptide), `<diaMinCharge>` and `<diaMaxCharge>` (1 and 4), `<lfqMinRatioCountDia>` (2). Match between runs does not apply.
+- A predicted library adds five jobs ("DIA library preparation" to "Sort library 0"): 50 jobs instead of 45.
+- Status: parameter files and dry runs are tested, full runs not yet. On the Mac, the x64 emulation (qemu in the podman machine) cannot read the Laybourn_2024 raw files: MaxQuant stops at once with `AccessViolationException` in `ThermoFisher.CommonCore.RawFileReader ... ScanEvent.CompareTo`, with one thread as well, and leaves a `qemu_dotnet_*.core` file of several hundred MB in the project folder. The Q Exactive DDA files of Bergant_2023 are read there without problems. Run such data on a Linux x86_64 server; `--create` and `--dryrun` work on the Mac.
+- `--create` in the DIA modes failed now and then on the Mac with `Error creating mqpar.xml: Exception has been thrown by the target of an invocation` and a truncated file; the same call then worked. `make_parameters_Laybourn_2024.sh` repeats it up to 3 times.
 
 ---
 
@@ -331,10 +351,10 @@ cat -t $P/parameter/design.txt
 
 ### What it does
 
-1. Checks prerequisites: podman available, image present, `mqpar.xml` and `design.txt` present, every raw and FASTA path in `mqpar.xml` is a `/work/...` path to an existing file.
+1. Checks prerequisites: podman available, image present, `mqpar.xml` and `design.txt` present, every raw, FASTA and DIA library path in `mqpar.xml` is a `/work/...` path to an existing file.
 2. Handles earlier results:
    - A finished run (`results/combined/`) is never overwritten without `--clean`.
-   - An unfinished run (`data/combined/` left by a failure, a stop or a SLURM time limit) is continued if `mqpar.xml`, `design.txt` and the FASTA files listed in `mqpar.xml` have the checksums recorded in `results/run_info.txt`. If one of them changed, it stops and asks for `--clean`. MaxQuant restarts with `--partial-processing` (job numbers from `results/dryrun.txt`):
+   - An unfinished run (`data/combined/` left by a failure, a stop or a SLURM time limit) is continued if `mqpar.xml`, `design.txt` and the FASTA and DIA library files listed in `mqpar.xml` have the checksums recorded in `results/run_info.txt`. If one of them changed, it stops and asks for `--clean`. MaxQuant restarts with `--partial-processing` (job numbers from `results/dryrun.txt`):
      - after a stop, at the job after the last finished one (`data/combined/proc/#runningTimes.txt`);
      - after a failure, at the failed job, which `proc/` marks with `<job> <n>.error.txt`. MaxQuant lists a failed job in `#runningTimes.txt` like a finished one, so this check comes first. Proc file names differ from the job names (`MSMS_main_search` for "MS/MS main search"), so names are compared without spaces and punctuation.
 
@@ -342,14 +362,14 @@ cat -t $P/parameter/design.txt
    - `--clean` deletes `results/combined/` and MaxQuant's working files in `data/` (per-raw-file folders, `.index` files, the mqpar copies). It never touches raw or FASTA files.
 3. Checks free disk space: MaxQuant's working files and `combined/` need up to 2.2 times the size of the raw files, minus what a continued run has already written. With less free space it stops, unless called with `--skip-disk-check`. A run that fills the disk fails hours in. With `--workdir`, the check applies to the work folder and adds the input files still to be copied, which are then copied.
 4. Writes `data/mqpar_run.xml`, a copy of `mqpar.xml` with this run's thread count: `--threads N`, otherwise the CPUs of the SLURM job (`SLURM_CPUS_PER_TASK`), otherwise `numThreads` from `mqpar.xml`. The thread count changes only the speed, not the results. A new run then checks the parameters with `--dryrun`.
-5. Writes `results/run_info.txt`: date, image ID, MaxQuant version, threads, SHA-256 checksums of `mqpar.xml`, `design.txt`, the raw files and the FASTA files listed in `mqpar.xml`, wherever they are in the project. The checksums prove which exact inputs produced the results. A continued run appends one line. With `--workdir`, the checksums are those of the copies MaxQuant read, and a line `inputs: copies in a work folder (--workdir)` says so.
+5. Writes `results/run_info.txt`: date, image ID, MaxQuant version, threads, SHA-256 checksums of `mqpar.xml`, `design.txt`, the raw files and the FASTA and DIA library files listed in `mqpar.xml`, wherever they are in the project. The checksums prove which exact inputs produced the results. A continued run appends one line. With `--workdir`, the checksums are those of the copies MaxQuant read, and a line `inputs: copies in a work folder (--workdir)` says so.
 6. Runs MaxQuant in the container and writes the full log to `results/maxquant_run.log` (appended when continued).
 7. Moves `combined/` from `data/` to `results/` (MaxQuant 2.9.0 always writes it into `data/`). With `--workdir`, it copies `combined/` to `results/` and then deletes the work folder.
 
 It does not run downstream analysis. QC and statistics belong in `analysis_of_results/`.
 
 With `--workdir DIR`, MaxQuant runs on copies of the input files in a folder of its own, `DIR/maxquant_<uid>_<project_name>/`, for example on a compute node's local disk when the project folder is on slow storage (section 8, batch jobs). That folder is mounted at `/work` instead of the project folder:
-- The runner copies the raw and FASTA files listed in `mqpar.xml` there. A copy with the size of the original counts as done, so a rerun copies only what is missing.
+- The runner copies the raw, FASTA and DIA library files listed in `mqpar.xml` there. A copy with the size of the original counts as done, so a rerun copies only what is missing.
 - MaxQuant writes its working files and `combined/` there. `results/`, with the log, `run_info.txt` and `dryrun.txt`, stays in the project folder.
 - An unfinished run can only be continued where its work folder is: on the same node, with the same `--workdir`. Anywhere else the runner starts a new run.
 - An unfinished run in the project folder's `data/combined/` blocks `--workdir`. Continue it without `--workdir`, or delete it with `--clean`.
@@ -430,7 +450,7 @@ sha256() { if command -v sha256sum > /dev/null; then sha256sum "$@"; else shasum
 # true if file $2 exists and has the size of file $1
 same_size() { [[ -f "$2" && "$(wc -c < "$1" | tr -d ' ')" == "$(wc -c < "$2" | tr -d ' ')" ]]; }
 # MaxQuant's working files in a data folder: combined/, a folder and an .index file per raw
-# file, the mqpar copies. Raw and FASTA files stay.
+# file, the mqpar copies. Raw, FASTA and library files stay.
 remove_working_files() {
   local d="$1" raw
   rm -rf "$d/combined"
@@ -471,7 +491,8 @@ while (( $# > 0 )); do
 done
 
 # the folder mounted as /work. With --workdir, a folder of its own in DIR holds copies of the
-# raw and FASTA files and all of MaxQuant's working files; results/ stays in the project folder.
+# raw, FASTA and library files and all of MaxQuant's working files; results/ stays in the
+# project folder.
 work="$PROJECT_DIR"
 copy_mode=0
 if [[ -n "$workdir" ]]; then
@@ -493,17 +514,27 @@ podman image exists "$IMAGE" || fail "image $IMAGE missing, see maxquant_intro.m
 [[ -f parameter/mqpar.xml ]] || fail "parameter/mqpar.xml missing"
 [[ -f parameter/design.txt ]] || fail "parameter/design.txt missing"
 compgen -G "data/*.raw" > /dev/null || fail "no .raw files in data/"
-# raw and FASTA paths in mqpar.xml must be container paths to existing files
-mq_paths="$(sed -n -e 's|.*<fastaFilePath>\(.*\)</fastaFilePath>.*|\1|p' \
-  -e '/<filePaths>/,/<\/filePaths>/s|.*<string>\(.*\)</string>.*|\1|p' "$MQPAR_HOST")"
+# paths of the DIA library files in mqpar.xml (MaxDIA with a library from files, e.g. evidence.txt
+# and msms.txt of an earlier search); none for DDA and for libraries predicted on the fly
+lib_paths() {
+  local t
+  for t in diaLibraryPaths diaEvidencePaths diaMsmsPaths; do
+    sed -n "/<$t>/,/<\/$t>/s|.*<string>\(.*\)</string>.*|\1|p" "$MQPAR_HOST"
+  done
+}
+# raw, FASTA and library paths in mqpar.xml must be container paths to existing files
+mq_paths="$({ sed -n -e 's|.*<fastaFilePath>\(.*\)</fastaFilePath>.*|\1|p' \
+  -e '/<filePaths>/,/<\/filePaths>/s|.*<string>\(.*\)</string>.*|\1|p' "$MQPAR_HOST"; lib_paths; } \
+  | awk 'NF && !seen[$0]++')"
 [[ -n "$mq_paths" ]] || fail "no raw or FASTA paths found in mqpar.xml"
 while IFS= read -r p; do
   [[ "$p" == /work/* ]] || fail "mqpar.xml path is not a /work/... path: $p"
   [[ -f "$PROJECT_DIR/${p#/work/}" ]] || fail "mqpar.xml path does not exist in the project: $p"
 done <<< "$mq_paths"
-# the FASTA files of the search, relative to the project folder (data/ or elsewhere, for
-# example an own database in parameter/); their checksums go into results/run_info.txt
-fasta_files="$(sed -n 's|.*<fastaFilePath>/work/\(.*\)</fastaFilePath>.*|\1|p' "$MQPAR_HOST")"
+# the FASTA and library files of the search, relative to the project folder (data/ or elsewhere,
+# for example an own database in parameter/); their checksums go into results/run_info.txt
+db_files="$({ sed -n 's|.*<fastaFilePath>\(.*\)</fastaFilePath>.*|\1|p' "$MQPAR_HOST"
+  lib_paths; } | awk 'NF && !seen[$0]++ { sub(/^\/work\//, ""); print }')"
 mqpar_threads="$(sed -n 's|.*<numThreads>\([0-9]*\)</numThreads>.*|\1|p' "$MQPAR_HOST")"
 [[ "$mqpar_threads" =~ ^[0-9]+$ ]] || fail "mqpar.xml needs exactly one <numThreads>"
 threads="${threads:-$mqpar_threads}"
@@ -531,7 +562,7 @@ elif [[ -d "$work/data/combined" ]]; then
     recorded="$(awk -v f="$f" '$2 == f { print $1 }' results/run_info.txt 2>/dev/null || true)"
     [[ -n "$recorded" && "$(sha256 "$f" | cut -d' ' -f1)" == "$recorded" ]] \
       || fail "data/combined holds an unfinished run, but $f differs from results/run_info.txt; rerun with --clean"
-  done <<< "$(printf '%s\n' parameter/mqpar.xml parameter/design.txt "$fasta_files")"
+  done <<< "$(printf '%s\n' parameter/mqpar.xml parameter/design.txt "$db_files")"
   [[ -f results/dryrun.txt ]] || fail "data/combined holds an unfinished run without results/dryrun.txt; rerun with --clean"
   last=""
   if [[ -f "$FINISHED" ]]; then
@@ -605,8 +636,8 @@ if (( free_kb < need_kb )); then
 else
   echo "disk space: $disk"
 fi
-# copies of the raw and FASTA files listed in mqpar.xml; a copy with the size of the original
-# counts as done, an interrupted one (.part) is replaced
+# copies of the raw, FASTA and library files listed in mqpar.xml; a copy with the size of the
+# original counts as done, an interrupted one (.part) is replaced
 if (( copy_kb > 0 )); then
   echo "copying $(awk -v c="$copy_kb" 'BEGIN { printf "%.1f", c / 1e6 }') GB of input files to the work folder ..."
   start=$SECONDS
@@ -651,7 +682,7 @@ if [[ -z "$resume" ]]; then
       sha256 data/*.raw
       while IFS= read -r db; do
         if [[ -n "$db" && -f "$db" ]]; then sha256 "$db"; fi
-      done <<< "$fasta_files"
+      done <<< "$db_files"
     )
   } > "$RESULTS/run_info.txt" || true
 else
@@ -705,6 +736,8 @@ echo "done: results/combined/txt"
 ```
 
 Notes on the template:
+
+- DIA library files listed in mqpar.xml (`<diaLibraryPaths>`, `<diaEvidencePaths>`, `<diaMsmsPaths>`) are handled like FASTA files (section 3, "DIA (MaxDIA)"). The runners of projects created before Laybourn_2024 lack this; for searches without library files they do the same.
 
 - `set -euo pipefail` stops the script at the first error. A failing MaxQuant run inside the `tee` pipe ends with a message that running the script again continues the run.
 - The script is bash and also runs with macOS's bash 3.2. Run it as `./run_<project>.sh` or with `bash`, not by `source` in zsh.
@@ -927,6 +960,9 @@ grep "^$USER:" /etc/subuid /etc/subgid
 | Podman warnings or errors about `XDG_RUNTIME_DIR` or `/run/user/<uid>` | The variable points to a folder that does not exist, as in batch jobs without a login session. `run_server.sh` unsets it (section 8, batch jobs); before podman commands typed by hand, run `unset XDG_RUNTIME_DIR`. |
 | `crun: setrlimit RLIMIT_NOFILE: Operation not permitted: OCI permission denied` | `default_ulimits` in the server's `containers.conf` is higher than the user's open-files limit (`ulimit -Hn`). The scripts pass `--ulimit nofile=-1:-1` (section 2); add it to podman commands typed by hand. `--ulimit host` does not help, because podman applies the configured value anyway. |
 | Podman warnings `no systemd user session available`, `Falling back to --cgroup-manager=cgroupfs` | Harmless; podman uses cgroupfs instead. To silence them, see section 8, batch jobs. |
+| `We do not support FAIMS DIA LFQ` (dry run) | FAIMS-MaxDIA (`FDIA`) has no LFQ in MaxQuant 2.9.0. For data with one FAIMS compensation voltage, use `--LCMSType DIA` (section 3, "DIA (MaxDIA)"). |
+| `AccessViolationException` in `ThermoFisher.CommonCore.RawFileReader ... ScanEvent.CompareTo`, `qemu: uncaught target signal 6` | The x64 emulation on the Mac cannot read these raw files (seen with Laybourn_2024: Orbitrap Exploris 480, FAIMS, DIA). Run on a Linux x86_64 server. The container can hang after the crash: `podman stop` it, and delete the `qemu_dotnet_*.core` file it leaves in the project folder. |
+| `Error creating mqpar.xml: Exception has been thrown by the target of an invocation` | Seen now and then with `--create` in DIA modes on the Mac, with a truncated mqpar.xml. Repeat the call. |
 | `zsh: no matches found` | zsh aborts a command when a wildcard matches nothing. Name files explicitly, or use the bash runner script. |
 | A job fails | Read `combined/proc/<job>.error.txt`. |
 | Run is slow (Mac) | x64 emulation in the podman machine costs speed. Check the machine's CPUs and memory with `podman machine inspect`. On a Linux x86_64 server, the image runs without emulation. |

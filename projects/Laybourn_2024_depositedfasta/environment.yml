@@ -1,0 +1,11 @@
+# Host tools for run_server.sh: the data download (get_data_Laybourn_2024_depositedfasta.sh) and the checksums
+# of run_Laybourn_2024_depositedfasta.sh. MaxQuant runs in the podman image and needs nothing from here.
+# setup.sh creates the environment under this name and recreates it when this file changes.
+name: maxquant_Laybourn_2024_depositedfasta
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.12
+  - curl
+  - perl  # provides shasum
