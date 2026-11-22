@@ -85,12 +85,27 @@ download_one() {
     cp "$sibling" "$part" || { echo "ERROR: copying $from/$dest failed" >&2; return 1; }
     echo "copied from $from: $dest"
   fi
-  local tries=0
+  # each attempt resumes the .part file; only attempts without progress count against the limit
+  # of 5 in a row, so a large file survives many broken connections
+  local stalls=0 before now
   while [[ ! -f "$part" || "$(size_of "$part")" -lt "$bytes" ]]; do
-    tries=$(( tries + 1 ))
-    curl -fsSL --retry 5 --retry-delay 10 -C - -o "$part" "$url" && break
-    (( tries < 5 )) || { echo "ERROR: download failed after $tries attempts: $url" >&2; return 1; }
-    echo "failed, continuing in 60 s (attempt $(( tries + 1 )) of 5): $dest" >&2
+    before=0
+    if [[ -f "$part" ]]; then before="$(size_of "$part")"; fi
+    if curl -fsSL --retry 5 --retry-delay 10 -C - -o "$part" "$url"; then
+      now=0
+      if [[ -f "$part" ]]; then now="$(size_of "$part")"; fi
+      if (( now >= bytes )); then break; fi
+      # curl can end without an error before the end of the file: it takes a resumed request
+      # that the server answers with 416 as complete. Without progress, start the file again.
+      echo "curl ended at $now of $bytes bytes without an error: $dest" >&2
+      if (( now <= before )); then rm -f "$part"; fi
+    fi
+    now=0
+    if [[ -f "$part" ]]; then now="$(size_of "$part")"; fi
+    if (( now > before )); then stalls=0; else stalls=$(( stalls + 1 )); fi
+    (( stalls < 5 )) || { echo "ERROR: download failed, 5 attempts in a row without progress: $url" >&2; return 1; }
+    echo "failed at $now of $bytes bytes, continuing in 60 s ($stalls of 5 attempts in a row" \
+      "without progress): $dest" >&2
     sleep 60
   done
   local status=0
