@@ -1,0 +1,46 @@
+id	job name
+1	Configuring 
+2	Assemble run info 
+3	Finish run info 
+4	Testing fasta files 
+5	Preparing searches 
+6	Generate libraries 
+7	Feature detection 
+8	Deisotoping 
+9	Parse libraries 
+10	Create slice data 
+11	Delete intermediate files1 
+12	Peak indexing 
+13	DIA library search1 
+14	DIA library search2 
+15	DIA library search3 
+16	Delete intermediate files2 
+17	Peptide FDR1 
+18	Peptide FDR2 
+19	Peptide FDR3 
+20	Preparing combined folder  
+21	Sequence coverage1 
+22	Sequence coverage2 
+23	Sequence coverage3 
+24	Sequence coverage4 
+25	DIA get keys 
+26	DIA quant preparation 
+27	DIA quant processing matches 
+28	Prepare protein assembly 
+29	Assembling proteins DIA1 
+30	Finish protein assembly 
+31	Updating identifications 
+32	Label-free preparation 
+33	Label-free normalization 
+34	Label-free quantification 
+35	Label-free collect 
+36	Label-free quantification (peptide) 
+37	Label-free collect (peptide) 
+38	Label-free quantification (modpep) 
+39	Label-free collect (modpep) 
+40	Label-free quantification (site) 
+41	Label-free collect (site) 
+42	Estimating complexity dia 
+43	Prepare writing tables  
+44	Writing tables 
+45	Finish writing tables  

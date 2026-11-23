@@ -1,0 +1,52 @@
+Configuring 
+Assemble run info 
+Finish run info 
+Testing fasta files 
+Preparing searches 
+DIA library preparation 
+[19:50:01] WARNING: /fs/home/urazbakhtin/xgboost_v1.7.5/xgboost/src/objective/regression_obj.cu:213: reg:linear is now deprecated in favor of reg:squarederror.
+[19:50:11] WARNING: /fs/home/urazbakhtin/xgboost_v1.7.5/xgboost/src/objective/regression_obj.cu:213: reg:linear is now deprecated in favor of reg:squarederror.
+Library prediction RT0 
+Library prediction 0 
+Finish library prediction 0 
+Sort library 0 
+Generate libraries 
+Feature detection 
+Deisotoping 
+Parse libraries 
+Create slice data 
+Delete intermediate files1 
+Peak indexing 
+DIA library search1 
+DIA library search2 
+DIA library search3 
+Delete intermediate files2 
+Peptide FDR1 
+Peptide FDR2 
+Peptide FDR3 
+Preparing combined folder  
+Sequence coverage1 
+Sequence coverage2 
+Sequence coverage3 
+Sequence coverage4 
+DIA get keys 
+DIA quant preparation 
+DIA quant processing matches 
+Prepare protein assembly 
+Assembling proteins DIA1 
+Finish protein assembly 
+Updating identifications 
+Label-free preparation 
+Label-free normalization 
+Label-free quantification 
+Label-free collect 
+Label-free quantification (peptide) 
+Label-free collect (peptide) 
+Label-free quantification (modpep) 
+Label-free collect (modpep) 
+Label-free quantification (site) 
+Label-free collect (site) 
+Estimating complexity dia 
+Prepare writing tables  
+Writing tables 
+Finish writing tables  

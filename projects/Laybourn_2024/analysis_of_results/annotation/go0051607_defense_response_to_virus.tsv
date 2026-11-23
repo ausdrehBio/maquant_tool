@@ -1,0 +1,255 @@
+# UniProt query '(organism_id:9823) AND (go:0051607)' on 2026-11-23; 253 entries
+accession	gene_names	protein_name
+A0A023VTS2	SAMHD1	Deoxynucleoside triphosphate triphosphohydrolase SAMHD1
+A0A077ETG0	TRIM56	E3 ubiquitin-protein ligase TRIM56 (EC 2.3.2.27) (Tripartite motif-containing protein 56)
+A0A140CQ62	TLR3	Toll-like receptor 3
+A0A140TAK4	MYD88	Myeloid differentiation primary response protein MyD88
+A0A286ZIT4	IFNAR2	Interferon alpha/beta receptor 2 (Type I interferon receptor 2)
+A0A286ZN85	STAT1	Signal transducer and activator of transcription
+A0A286ZPJ7	RNASEL	Ribonuclease L
+A0A286ZQW9	ZDHHC11	Palmitoyltransferase (EC 2.3.1.225)
+A0A286ZRE7	OTUD4	OTU domain-containing protein 4 (EC 3.4.19.12)
+A0A286ZS94	NLRC5	Protein NLRC5
+A0A286ZT21	IFIH1	Interferon-induced helicase C domain-containing protein 1 (EC 3.6.4.13) (Helicase with 2 CARD domains) (Melanoma differentiation-associated protein 5) (RIG-I-like receptor 2)
+A0A286ZTN5	G3BP1	Ras GTPase-activating protein-binding protein 1 (EC 3.6.4.12) (EC 3.6.4.13)
+A0A286ZU72	CLPB	Mitochondrial disaggregase (Suppressor of potassium transport defect 3)
+A0A287A210	USP18	Ubl carboxyl-terminal hydrolase 18 (EC 3.4.19.12) (ISG15-specific-processing protease) (Ubl thioesterase 18)
+A0A287A3I4		single-stranded DNA cytosine deaminase (EC 3.5.4.38)
+A0A287A573	PML	Protein PML
+A0A287A5C9	STAT1	Signal transducer and activator of transcription
+A0A287A5I9	PRKRA	Interferon-inducible double-stranded RNA-dependent protein kinase activator A (Protein activator of the interferon-induced protein kinase) (Protein kinase, interferon-inducible double-stranded RNA-dependent activator)
+A0A287A6Q8	IL29	Interleukin 29 (interferon, lambda 1)
+A0A287A7M1	TRIM7	RING-type E3 ubiquitin transferase (EC 2.3.2.27)
+A0A287A7P1	IFIH1	Interferon-induced helicase C domain-containing protein 1 (EC 3.6.4.13) (Helicase with 2 CARD domains) (Melanoma differentiation-associated protein 5) (RIG-I-like receptor 2)
+A0A287A9E2	LOC102161418	Uncharacterized protein
+A0A287A9J8	BST2	Bone marrow stromal cell antigen 2
+A0A287AB58	ISG15	Ubiquitin-like protein ISG15 (Ubiquitin cross-reactive protein)
+A0A287AG10	MLKL	Mixed lineage kinase domain like pseudokinase
+A0A287AIB9	IFI44L	Interferon-induced protein 44-like
+A0A287AJ30	TRIM41	E3 ubiquitin-protein ligase TRIM41 (EC 2.3.2.27) (Tripartite motif-containing protein 41)
+A0A287AJ70	BNIP3L	BCL2 interacting protein 3 like
+A0A287AK56	ATG7	Ubiquitin-like modifier-activating enzyme ATG7 (Autophagy-related protein 7)
+A0A287AKR1	IFIH1	Interferon-induced helicase C domain-containing protein 1 (EC 3.6.4.13) (Helicase with 2 CARD domains) (Melanoma differentiation-associated protein 5) (RIG-I-like receptor 2)
+A0A287AL42	TBK1	Serine/threonine-protein kinase TBK1 (EC 2.7.11.1) (T2K) (TANK-binding kinase 1)
+A0A287AM56	STAT1	Signal transducer and activator of transcription
+A0A287AMI4	USP44	Ubiquitin carboxyl-terminal hydrolase (EC 3.4.19.12)
+A0A287AMJ0	RIGI	Antiviral innate immune response receptor RIG-I (EC 3.6.4.13) (ATP-dependent RNA helicase DDX58) (DEAD box protein 58) (RIG-I-like receptor 1) (Retinoic acid-inducible gene 1 protein) (Retinoic acid-inducible gene I protein)
+A0A287AP99	TRIM11	E3 ubiquitin-protein ligase TRIM11 (EC 2.3.2.27) (Tripartite motif-containing protein 11)
+A0A287APJ6	KDSR BCL2	Apoptosis regulator Bcl-2
+A0A287AQJ7	DHX15	ATP-dependent RNA helicase DHX15 (EC 3.6.4.13) (DEAH box protein 15)
+A0A287AQM5	IRF2	Interferon regulatory factor 1
+A0A287ASL4	TTC4	Tetratricopeptide repeat domain 4
+A0A287AUT0	GBP5	Guanylate binding protein 5
+A0A287AV88	PLA2G10	Phospholipase A2 (EC 3.1.1.4)
+A0A287AXI5	IFI6	Interferon alpha inducible protein 6
+A0A287AZS0	PML	Protein PML
+A0A287B2B5	SHFL	Shiftless antiviral inhibitor of ribosomal frameshifting
+A0A287B3Q7	MOV10	RNA helicase MOV-10 (EC 5.6.2.5) (RNA 5'-3' helicase MOV-10)
+A0A287B5Q0	DHX35	Probable ATP-dependent RNA helicase DHX35 (EC 3.6.4.13) (DEAH box protein 35)
+A0A287B6T9	RSAD2	S-adenosylmethionine-dependent nucleotide dehydratase RSAD2 (Radical S-adenosyl methionine domain-containing protein 2) (Virus inhibitory protein, endoplasmic reticulum-associated, interferon-inducible)
+A0A287B7A8	LOC102161030	Interferon lambda-4-like
+A0A287B896	SETD2	Histone-lysine N-methyltransferase SETD2 (EC 2.1.1.359) (Lysine N-methyltransferase 3A) (Protein-lysine N-methyltransferase SETD2) (SET domain-containing protein 2)
+A0A287B8T4	STAT1	Signal transducer and activator of transcription
+A0A287BB10	PBLD	Phenazine biosynthesis like protein domain containing
+A0A287BC59	UBE2W	Ubiquitin-conjugating enzyme E2 W (EC 2.3.2.23) (EC 2.3.2.25) (E2 ubiquitin-conjugating enzyme W) (N-terminal E2 ubiquitin-conjugating enzyme) (N-terminus-conjugating E2) (Ubiquitin carrier protein W) (Ubiquitin-protein ligase W)
+A0A287BCK2	TRIM56	E3 ubiquitin-protein ligase TRIM56 (EC 2.3.2.27) (Tripartite motif-containing protein 56)
+A0A287BKF1	EIF2AK2	Interferon-induced, double-stranded RNA-activated protein kinase (EC 2.7.10.2) (EC 2.7.11.1) (Eukaryotic translation initiation factor 2-alpha kinase 2) (Interferon-inducible RNA-dependent protein kinase) (Protein kinase RNA-activated) (Tyrosine-protein kinase EIF2AK2)
+A0A287BLD5	PBLD	Phenazine biosynthesis like protein domain containing
+A0A287BLS6	AKAP1	A-kinase anchor protein 1, mitochondrial (Dual specificity A-kinase-anchoring protein 1) (Protein kinase A-anchoring protein 1)
+A0A287BNE9	TRIM28	Transcription intermediary factor 1-beta (EC 2.3.2.27) (E3 SUMO-protein ligase TRIM28) (RING-type E3 ubiquitin transferase TIF1-beta) (Tripartite motif-containing protein 28)
+A0A288CFW7	ZBP1	Z-DNA-binding protein 1 (Tumor stroma and activated macrophage protein DLM-1)
+A0A288CG39	TLR7	Toll-like receptor 9
+A0A2H4ZEZ0	ISG15	Ubiquitin-like protein ISG15 (Ubiquitin cross-reactive protein)
+A0A2S1PVX7	MDA5	Interferon-induced helicase C domain-containing protein 1 (EC 3.6.4.13) (Helicase with 2 CARD domains) (Melanoma differentiation-associated protein 5) (RIG-I-like receptor 2)
+A0A480JXC7	PML	Protein PML
+A0A480KKH4	UAP1	UDP-N-acetylhexosamine pyrophosphorylase (EC 2.7.7.23) (EC 2.7.7.83) (Protein-pyrophosphorylation enzyme) (UDP-N-acetylgalactosamine pyrophosphorylase) (UDP-N-acetylglucosamine pyrophosphorylase)
+A0A480U735	ZMYND11	Zinc finger MYND domain-containing protein 11
+A0A480V3N9		Deoxynucleoside triphosphate triphosphohydrolase SAMHD1
+A0A4X1SFQ0	SYK	Tyrosine-protein kinase (EC 2.7.10.2)
+A0A4X1T661	SERINC5	Serine incorporator 5
+A0A4X1T7U4	DDIT4	DNA damage-inducible transcript 4 protein
+A0A4X1T9F7	STAT1	Signal transducer and activator of transcription
+A0A4X1U0W1	CNOT7	poly(A)-specific ribonuclease (EC 3.1.13.4)
+A0A4X1UHW4	TRIM11	E3 ubiquitin-protein ligase TRIM11 (EC 2.3.2.27) (Tripartite motif-containing protein 11)
+A0A4X1UTW6	RNASE6	Ribonuclease A family member 6
+A0A4X1VHH1	SMARCA5	SWI/SNF related, matrix associated, actin dependent regulator of chromatin, subfamily a, member 5
+A0A4X1VML5	USP27X	Ubiquitin carboxyl-terminal hydrolase (EC 3.4.19.12)
+A0A5G2Q7I5	SAMHD1	Deoxynucleoside triphosphate triphosphohydrolase SAMHD1
+A0A5G2Q9L1	RAB2B	RAB2B, member RAS onco family
+A0A5G2Q9Z7	TRIM26	Tripartite motif-containing protein 26 (EC 2.3.2.27) (Zinc finger protein 173)
+A0A5G2QA15		Interferon-induced transmembrane protein 3
+A0A5G2QAY7	TLR3	Toll-like receptor 3
+A0A5G2QD06	NCBP1	Nuclear cap-binding protein subunit 1 (80 kDa nuclear cap-binding protein)
+A0A5G2QDA1	TLR8	Toll-like receptor 9
+A0A5G2QFX9	MBL2	Mannose-binding protein C
+A0A5G2QGK6	RSAD2	S-adenosylmethionine-dependent nucleotide dehydratase RSAD2 (Radical S-adenosyl methionine domain-containing protein 2) (Virus inhibitory protein, endoplasmic reticulum-associated, interferon-inducible)
+A0A5G2QIL7	OAS1	2'-5'-oligoadenylate synthetase 1
+A0A5G2QIT3	RSAD2	S-adenosylmethionine-dependent nucleotide dehydratase RSAD2 (Radical S-adenosyl methionine domain-containing protein 2) (Virus inhibitory protein, endoplasmic reticulum-associated, interferon-inducible)
+A0A5G2QKE0	IFITM1	Interferon-induced transmembrane protein 1
+A0A5G2QQC4	NMB	Neuromedin B
+A0A5G2QRV7	DDX60	DExD/H-box helicase 60
+A0A5G2QSW4	TRIM25	E3 ubiquitin/ISG15 ligase TRIM25 (EC 2.3.2.27) (EC 6.3.2.n3) (Estrogen-responsive finger protein) (RING-type E3 ubiquitin transferase) (RING-type E3 ubiquitin transferase TRIM25) (Tripartite motif-containing protein 25) (Ubiquitin/ISG15-conjugating enzyme TRIM25) (Zinc finger protein 147)
+A0A5G2QT83	PHB2	Prohibitin
+A0A5G2QV15	MX1	Interferon-induced GTP-binding protein Mx1 (Myxoma resistance protein 1) (Myxovirus resistance protein 1)
+A0A5G2QWL4	LOC100626247	Uncharacterized protein
+A0A5G2QX76	PLSCR1	Phospholipid scramblase
+A0A5G2QXT7	TRIM35	E3 ubiquitin-protein ligase TRIM35 (EC 2.3.2.27)
+A0A5G2QXU4	CD207	C-type lectin domain family 4 member K (Langerin)
+A0A5G2QZ64	SAMHD1	Deoxynucleoside triphosphate triphosphohydrolase SAMHD1
+A0A5G2R1L5	MYO1F	Myosin IF
+A0A5G2R2Y9	TMEM120A	Transmembrane protein 120A
+A0A5G2R9F5	MORC3	MORC family CW-type zinc finger 3
+A0A5G2RJE9	TRIM14	Tripartite motif containing 14
+A0A5G2RKN9	SLFN11	Schlafen family member 11
+A0A5G2RKW8	NLRP6	NACHT, LRR and PYD domains-containing protein 6 (Angiotensin II/vasopressin receptor)
+A0A5K1TZ96	HYAL2	Hyaluronidase (EC 3.2.1.35)
+A0A5K1U1J3	STAT1	Signal transducer and activator of transcription
+A0A5K1UFA2	IFIT3 IFIT1	Interferon induced protein with tetratricopeptide repeats 3
+A0A5K1UN68	IL28B LOC110255217	Interleukin 28B (interferon, lambda 3)
+A0A5K1V3V4	MAVS	Mitochondrial antiviral signaling protein
+A0A5K1V9I9	MID2	RING-type E3 ubiquitin transferase (EC 2.3.2.27)
+A0A5S6GDS9	IRF1	Interferon regulatory factor
+A0A8D0SNQ5	STAT1	Signal transducer and activator of transcription
+A0A8D0TE27	CHMP3	Charged multivesicular body protein 3
+A0A8D0WX68	IFIT5	Interferon induced protein with tetratricopeptide repeats 5
+A0A8D0X0F9	IFIT2	Interferon induced protein with tetratricopeptide repeats 2
+A0A8D1IP51		single-stranded DNA cytosine deaminase (EC 3.5.4.38)
+A0A8K1K0K0	PML	Protein PML
+A0A8K1K0R2	PML	Protein PML
+A0A8K1K0X1	PML	Protein PML
+A0A8K1K264	PML	Protein PML
+A0A8W4FAL6	ZCCHC3	Zinc finger CCHC-type containing 3
+A0A8W4FP74	IRF5	Interferon regulatory factor 5
+A0A900QTH5	NMBR	Neuromedin-B receptor (Neuromedin-B-preferring bombesin receptor)
+A0ACM8QBH6	IRF7	Interferon regulatory factor 7
+A0ACM8RB37	TICAM1	TIR domain-containing adapter molecule 1 (TICAM-1)
+A0ACM8RBM2	TRIM8	E3 ubiquitin-protein ligase TRIM8 (EC 2.3.2.27) (Glioblastoma-expressed RING finger protein) (RING finger protein 27) (RING-type E3 ubiquitin transferase TRIM8) (Tripartite motif-containing protein 8)
+A0ENH4	TLR3	Toll-like receptor 3
+A0FDH3	APOBEC3F	single-stranded DNA cytosine deaminase (EC 3.5.4.38)
+A0FIN4	IRF1	Interferon regulatory factor 1 (IRF-1)
+A0ZVR0	Irf7	Interferon regulatory factor 7
+A2TF48	MYD88	Myeloid differentiation primary response protein MyD88
+A7LCX1	MDA5	Interferon-induced helicase C domain-containing protein 1 (EC 3.6.4.13) (Helicase with 2 CARD domains) (Melanoma differentiation-associated protein 5) (RIG-I-like receptor 2)
+A7RDK6		Toll-like receptor 3
+A7UHZ5	IFNE IFNE1	Interferon epsilon (IFN-epsilon) (Interferon epsilon-1)
+A7VK00	MX2	Interferon-induced GTP-binding protein Mx2 (Myxovirus resistance protein 2)
+A7XUJ6	TRAF6	TNF receptor-associated factor 6 (EC 2.3.2.27) (E3 ubiquitin-protein ligase TRAF6) (RING-type E3 ubiquitin transferase TRAF6)
+A9YTX9	IRF3	Interferon regulatory factor 3
+A9YTY0	IRF7	Interferon regulatory factor 7
+B1B1P8	TLR3	Toll-like receptor 3
+B2LUG8		Ubiquitin-like protein ISG15 (Ubiquitin cross-reactive protein)
+B2ZDZ2	ISG15	Ubiquitin-like protein ISG15 (Ubiquitin cross-reactive protein)
+B2ZI34	NMBR	Neuromedin-B receptor (NMB-R) (Neuromedin-B-preferring bombesin receptor)
+B3GDZ6	TNFa	Tumor necrosis factor (TNF-a) (Cachectin) (TNF-alpha) (Tumor necrosis factor ligand superfamily member 2) [Cleaved into: Intracellular domain 1 (ICD1); Intracellular domain 2 (ICD2); C-domain 1; C-domain 2; Tumor necrosis factor, soluble form]
+B6EUP2	TLR3	Toll-like receptor 3
+B8XX89	IL29	IL-29 (Interleukin-29)
+B8XX90	STING1 STING TMEM173	Stimulator of interferon genes protein (poSTING) (Transmembrane protein 173)
+B8XX91	DAI	Z-DNA-binding protein 1 (Tumor stroma and activated macrophage protein DLM-1)
+C4NF76	BST2	Bone marrow stromal cell antigen 2 (Tetherin-like protein)
+C8CKC2	IFN-epsilon	Interferon epsilon (Interferon epsilon-1)
+D0FHA1		Interleukin-28B
+D0V2A2	TLR3	Toll-like receptor 3
+D2KC06		Interferon regulatory factor
+E5LCI0		Toll-like receptor 3
+E7CR00	stat2	Signal transducer and activator of transcription
+F1KBP9	TLR3	Toll-like receptor 3
+F1RGC4	LOC100519082	Interferon-induced transmembrane protein 1
+F1RGH2	STING1	Stimulator of interferon genes protein
+F1RGS3	NCBP3	Nuclear cap-binding protein subunit 3
+F1RHN8	TRIM21	E3 ubiquitin-protein ligase TRIM21 (EC 2.3.2.27) (52 kDa Ro protein) (52 kDa ribonucleoprotein autoantigen Ro/SS-A) (Ro(SS-A)) (Sjoegren syndrome type A antigen) (Tripartite motif-containing protein 21)
+F1RIV0	OASL	2'-5'-oligoadenylate synthetase like
+F1RJE4	ATAD3A	ATPase family AAA domain containing 3A
+F1RK25	TRIM13	E3 ubiquitin-protein ligase TRIM13 (EC 2.3.2.27) (Putative tumor suppressor RFP2) (RING-type E3 ubiquitin transferase TRIM13) (Ret finger protein 2) (Tripartite motif-containing protein 13)
+F1RKA7	OAS2	2'-5' oligoadenylate synthase (EC 2.7.7.84)
+F1RKW3	RNF135	E3 ubiquitin-protein ligase RNF135 (EC 2.3.2.27) (RING finger protein 135) (RING-type E3 ubiquitin transferase RNF135)
+F1RKZ6	USP7	Ubiquitin C-terminal hydrolase 7 (EC 3.4.19.12) (Deubiquitinating enzyme 7) (Herpesvirus-associated ubiquitin-specific protease) (Ubiquitin thioesterase 7) (Ubiquitin-specific-processing protease 7)
+F1RR25	MAP3K14	Mitogen-activated protein kinase kinase kinase 14 (EC 2.7.11.25)
+F1RSG5	OPRK1	Kappa-type opioid receptor
+F1RW04	TRIM65	E3 ubiquitin-protein ligase TRIM65 (EC 2.3.2.27) (Tripartite motif-containing protein 65)
+F1RY01	NDUFAF4	NADH dehydrogenase [ubiquinone] 1 alpha subcomplex assembly factor 4
+F1RZ50	TRIM10	RING-type E3 ubiquitin transferase (EC 2.3.2.27)
+F1RZN4	TLR3	Toll-like receptor 3
+F1S0P6	DHX58	RNA helicase (EC 3.6.4.13)
+F1S0Q0	KAT2A	histone acetyltransferase (EC 2.3.1.48)
+F1S2H4	F2RL1	F2R like trypsin receptor 1
+F1S2J0	ZDHHC1	Palmitoyltransferase (EC 2.3.1.225)
+F1S5A8	DHX15	ATP-dependent RNA helicase DHX15 (EC 3.6.4.13) (DEAH box protein 15)
+F1S5F1	PTPRC	Receptor-type tyrosine-protein phosphatase C (EC 3.1.3.48) (Leukocyte common antigen) (T200)
+F1S5R1	TRIM17	RING-type E3 ubiquitin transferase (EC 2.3.2.27)
+F1S855	TRIM8	E3 ubiquitin-protein ligase TRIM8 (EC 2.3.2.27) (Glioblastoma-expressed RING finger protein) (RING finger protein 27) (RING-type E3 ubiquitin transferase TRIM8) (Tripartite motif-containing protein 8)
+F1S9L2	RSAD2	S-adenosylmethionine-dependent nucleotide dehydratase RSAD2 (Radical S-adenosyl methionine domain-containing protein 2) (Virus inhibitory protein, endoplasmic reticulum-associated, interferon-inducible)
+F1SA51	MARCHF2	E3 ubiquitin-protein ligase MARCHF2 (EC 2.3.2.27) (Membrane-associated RING finger protein 2) (Membrane-associated RING-CH protein II) (RING-type E3 ubiquitin transferase MARCHF2)
+F1SCY2	IFIT3	Interferon induced protein with tetratricopeptide repeats 3
+F1SG66	MX2	Interferon-induced GTP-binding protein Mx2 (Myxovirus resistance protein 2)
+F1SGK9	PDE12	2',5'-phosphodiesterase 12 (EC 3.1.13.4) (Mitochondrial deadenylase)
+F1SGQ6	RIPK3	Receptor-interacting serine/threonine-protein kinase 3 (EC 2.7.11.1) (RIP-like protein kinase 3) (Receptor-interacting protein 3)
+F1SH50	TRIM59	Tripartite motif-containing protein 59
+F1SID1	PML	Protein PML
+F1SIE4	UBL7	Ubiquitin-like protein 7
+F1SLW5	AICDA	Single-stranded DNA cytosine deaminase (EC 3.5.4.38) (Activation-induced cytidine deaminase) (Cytidine aminohydrolase)
+F1SMI2	TRIM32	E3 ubiquitin-protein ligase TRIM32 (EC 2.3.2.27) (RING-type E3 ubiquitin transferase TRIM32) (Tripartite motif-containing protein 32)
+F1SSH6	DDX56	Probable ATP-dependent RNA helicase DDX56 (EC 3.6.4.13) (DEAD box protein 56)
+F1SUB6	PRF1	Perforin-1 (Cytolysin) (Lymphocyte pore-forming protein)
+F1SV81	TRIM62	E3 ubiquitin-protein ligase TRIM62 (EC 2.3.2.27) (Tripartite motif-containing protein 62)
+F2W854		single-stranded DNA cytosine deaminase (EC 3.5.4.38)
+F2Z4Y3	LIMK2 RNF185	E3 ubiquitin-protein ligase RNF (EC 2.3.2.27) (RING finger protein)
+F2Z543	PHB1	Prohibitin
+F4ZS19	PLSCR1	Phospholipid scramblase
+F6PVF4	RELA	RELA proto-onco, NF-kB subunit
+F6Q6U7	SKP2	S-phase kinase-associated protein 2 (Cyclin-A/CDK2-associated protein p45) (F-box protein Skp2)
+G3FP13	PQBP1	Polyglutamine-binding protein 1 (Polyglutamine tract-binding protein 1)
+G9BFT9	STAT1	Signal transducer and activator of transcription
+G9BFU0	STAT1	Signal transducer and activator of transcription
+G9BFU1	STAT1	Signal transducer and activator of transcription
+I3L5Z9	ZNFX1	NFX1-type zinc finger-containing protein 1 (EC 2.3.2.27) (ATP- dependent RNA translocase ZNFX1) (E3 ubiquitin-protein and -ssRNA ligase ZNFX1)
+I3LA49	HERC5	HECT and RLD domain containing E3 ubiquitin protein ligase 5
+I3LAM0		RING-type E3 ubiquitin transferase (EC 2.3.2.27)
+I3LB04	ISG20	Interferon stimulated exonuclease 20
+I3LBG3	USP20	Ubiquitin carboxyl-terminal hydrolase (EC 3.4.19.12)
+I3LDJ9	BNIP3	BCL2 interacting protein 3
+I3LES5	DUS2	tRNA-dihydrouridine(20) synthase [NAD(P)+]-like (EC 1.3.1.91) (Dihydrouridine synthase 2) (tRNA-dihydrouridine synthase 2-like)
+I3LG40	SENP7	SUMO specific peptidase 7
+I3LG77	SAMHD1	Deoxynucleoside triphosphate triphosphohydrolase SAMHD1
+I3LIW9	IL6	Interleukin-6
+I3LM39	CGAS MB21D1	Cyclic GMP-AMP synthase (cGAMP synthase) (cGAS) (EC 2.7.7.86) (2'3'-cGAMP synthase) (Mab-21 domain-containing protein 1)
+I3LP69	NCK1	Cytoplasmic protein
+I3LSJ0	ATG16L1	Autophagy related 16 like 1
+I3LSQ7	SAMHD1	Deoxynucleoside triphosphate triphosphohydrolase SAMHD1
+K7GKN2	MX1	Interferon-induced GTP-binding protein Mx1 (Myxoma resistance protein 1) (Myxovirus resistance protein 1)
+K7GKN4	TRIM27	Zinc finger protein RFP (EC 2.3.2.27) (Ret finger protein) (Tripartite motif-containing protein 27)
+K7GLC7	TRIM6	RING-type E3 ubiquitin transferase (EC 2.3.2.27)
+K7GM32	IRF3	Interferon regulatory factor 3
+K7GND2	TRIM27	RING-type E3 ubiquitin transferase (EC 2.3.2.27)
+K7GQI7	ASC	Apoptosis-associated speck-like protein containing a CARD (PYD and CARD domain-containing protein)
+K7GR01	DUOX1	Dual oxidase 1 (EC 1.6.3.1)
+K7GS01	BPIFA1	BPI fold-containing family A member 1 (Palate lung and nasal epithelium clone protein)
+K9IWC1	SERINC3	Serine incorporator 3
+K9IWC7	TRIM25	E3 ubiquitin/ISG15 ligase TRIM25 (EC 2.3.2.27) (EC 6.3.2.n3) (Estrogen-responsive finger protein) (RING-type E3 ubiquitin transferase) (RING-type E3 ubiquitin transferase TRIM25) (Tripartite motif-containing protein 25) (Ubiquitin/ISG15-conjugating enzyme TRIM25) (Zinc finger protein 147)
+K9J4S2	TRIM11	E3 ubiquitin-protein ligase TRIM11 (EC 2.3.2.27) (Tripartite motif-containing protein 11)
+K9J4W6	ZNFX1	NFX1-type zinc finger-containing protein 1 (EC 2.3.2.27) (ATP- dependent RNA translocase ZNFX1) (E3 ubiquitin-protein and -ssRNA ligase ZNFX1)
+K9J6H0	TICAM1	TIR domain-containing adapter molecule 1 (TICAM-1)
+L7XAW5	IRG6	S-adenosylmethionine-dependent nucleotide dehydratase RSAD2 (Radical S-adenosyl methionine domain-containing protein 2) (Virus inhibitory protein, endoplasmic reticulum-associated, interferon-inducible)
+M3UZA5	PML	Protein PML
+O02799	STAT2	Signal transducer and activator of transcription 2
+P01297	NMB	Neuromedin-B [Cleaved into: Neuromedin-B-32; Neuromedin-B-30; Neuromedin-B]
+P23563	TNF TNFA TNFSF2	Tumor necrosis factor (Cachectin) (TNF-alpha) (Tumor necrosis factor ligand superfamily member 2) (TNF-a) [Cleaved into: Tumor necrosis factor, membrane form (N-terminal fragment) (NTF); Intracellular domain 1 (ICD1); Intracellular domain 2 (ICD2); C-domain 1; C-domain 2; Tumor necrosis factor, soluble form]
+P27594	MX1	Interferon-induced GTP-binding protein Mx1 (Myxoma resistance protein 1) (Myxovirus resistance protein 1)
+P80015	AZU1	Azurocidin (Cationic antimicrobial protein CAP37) (Heparin-binding protein) (HBP) (pHBP)
+Q29599	OAS1	2'-5'-oligoadenylate synthase 1 ((2-5')oligo(A) synthase 1) (2-5A synthase 1) (EC 2.7.7.84) (p42 OAS)
+Q56VC2	FADD TNFRSF6	FAS-associated death domain protein (FAS-associating death domain-containing protein)
+Q59HI8	TLR2	Toll-like receptor 2
+Q5I2M3	TLR9	Toll-like receptor 9 (CD antigen CD289)
+Q5S1S3	CXCL10	C-X-C motif chemokine
+Q66UW5	ISG20	Interferon-stimulated gene 20 kDa protein (EC 3.1.13.1)
+Q764M5	STAT1	Signal transducer and activator of transcription 1
+Q764M6	IRF3	Interferon regulatory factor 3 (IRF-3)
+Q767K6	DHX16 DDX16	Pre-mRNA-splicing factor ATP-dependent RNA helicase DHX16 (EC 3.6.4.13) (DEAH-box protein 16)
+Q865R7	TLR8	Toll-like receptor 9
+Q8HZK3	DUOX1	Dual oxidase 1 (EC 1.-.-.-) (EC 1.11.1.-) (EC 1.6.3.1)
+Q9GLV6	RIGI DDX58	Antiviral innate immune response receptor RIG-I (ATP-dependent RNA helicase DDX58) (EC 3.6.4.13) (DEAD box protein 58) (RHIV-1) (RIG-I-like receptor 1) (RLR-1) (RNA helicase induced by virus) (Retinoic acid-inducible gene 1 protein) (RIG-1) (Retinoic acid-inducible gene I protein) (RIG-I)
+Q9MZU4	RSAD2 CIG6 IRG6	S-adenosylmethionine-dependent nucleotide dehydratase RSAD2 (SAND) (EC 4.2.-.-) (Inflammatory response gene 6 protein) (Radical S-adenosyl methionine domain-containing protein 2) (Virus inhibitory protein, endoplasmic reticulum-associated, interferon-inducible) (Viperin)
+Q9N1A2	BCL2L1 bcl-xL	Bcl-2-like protein 1 (Apoptosis regulator Bcl-X)
+Q9N1X4	SFTPD	Pulmonary surfactant-associated protein D (PSP-D) (SP-D) (Lung surfactant protein D)
+Q9TSW0	TRIM15 ZNFB7	E3 ubiquitin-protein ligase TRIM15 (EC 2.3.2.27) (Zinc finger protein B7)
+V9P0U7	TLR-3	Toll-like receptor 3
+X2KPB3		Interferon regulatory factor 7

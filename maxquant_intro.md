@@ -993,10 +993,10 @@ grep "^$USER:" /etc/subuid /etc/subgid
 
 ## 10. Repository notes
 
-- **No complete host paths in any committed file**: no `/Users/<name>/...` or other home folder paths in scripts, logs, docs or parameter files. Scripts print paths relative to the project folder. The `/work/...` container paths in mqpar.xml are required by MaxQuant and reveal nothing about the host. Check before every commit, the command must print nothing:
+- **No complete host paths in any committed file**: no `/Users/<name>/...` or other home folder paths in scripts, logs, docs or parameter files. Scripts print paths relative to the project folder. The `/work/...` container paths in mqpar.xml are required by MaxQuant and reveal nothing about the host. MaxDIA logs contain a warning of MaxQuant's XGBoost library with the path it was built in (`.../xgboost_v1.7.5/xgboost/src/...`); it is part of MaxQuant's binary, not a host path, and the check skips it. Check before every commit, the command must print nothing:
 
 ```bash
-git grep -n -I -E "/Users/[A-Za-z]|/home/[a-z]" ; git ls-files -o --exclude-standard | xargs grep -n -I -E "/Users/[A-Za-z]|/home/[a-z]"
+{ git grep -n -I -E "/Users/[A-Za-z]|/home/[a-z]" ; git ls-files -o --exclude-standard | xargs grep -n -I -E "/Users/[A-Za-z]|/home/[a-z]" ; } | grep -v "/xgboost_v1.7.5/xgboost/src/"
 ```
 
 - `MaxQuant_v.2.9.0/` contains MaxQuant's binaries and Thermo's RawFileReader DLLs. Both are distributed under their own licenses, which restrict redistribution. Keep this folder out of git.
