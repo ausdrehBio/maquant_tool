@@ -277,7 +277,7 @@ mq /work/parameter/mqpar.xml --dryrun
 
 ### Own FASTA files
 
-Sequences that no public database provides (variants, constructs, a project-specific protein list) go into an own FASTA file, which MaxQuant searches together with the others. Example: `projects/Bergant_2023_adapted/`.
+Sequences that no public database provides (variants, constructs, a project-specific protein list) go into an own FASTA file, which MaxQuant searches together with the others. Examples: `projects/Bergant_2023_adapted/` (DDA) and `projects/Laybourn_2024_adapted/` (DIA: MaxDIA predicts its library from all FASTA files of the search, so the own file needs no further setting).
 
 - Keep it in the project's `parameter/` folder, so it is in git: `data/` is not. List it in `mqpar.xml` as a further `<FastaFileInfo>` with the path `/work/parameter/<name>.fasta` and the parse rules of the other files, apart from the identifier rule where its headers need another one.
 - Header and identifier rule, one of two forms:
@@ -288,7 +288,7 @@ Sequences that no public database provides (variants, constructs, a project-spec
 
 ### DIA (MaxDIA)
 
-Example: `projects/Laybourn_2024/` (Orbitrap Exploris 480, FAIMS at one compensation voltage) and its variants `Laybourn_2024_depositedfasta`, `_pools` and `_poollib`.
+Example: `projects/Laybourn_2024/` (Orbitrap Exploris 480, FAIMS at one compensation voltage) and its variants `Laybourn_2024_depositedfasta`, `_pools`, `_poollib` and `_adapted` (one more FASTA file).
 
 - Run type `--LCMSType DIA`. `FDIA` (FAIMS-MaxDIA) has no label-free quantification in 2.9.0: with `--useLFQ` the dry run stops with `We do not support FAIMS DIA LFQ`. Data with a single FAIMS compensation voltage need no FAIMS run type, since MaxQuant sets FAIMS only for more than one CV (changelog 2.8.1).
 - The spectral library is set by `--libraryType` in `--create`, which writes `<diaLibraryType>` in mqpar.xml:
